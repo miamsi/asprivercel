@@ -18,20 +18,19 @@ import {
   User,
   ExternalLink,
   ChevronRight,
+  Tag,
   AlertTriangle,
   Lock,
   Mail,
-  Loader2,
-  Menu,
-  X
+  Loader2
 } from 'lucide-react';
 import { humanizeDue } from '@/lib/time_utils';
 import { CATEGORY_EMOJI, PRIORITY_EMOJI } from '@/lib/connectors/todos';
 
-// Build-safe initialization: Uses dummy strings during Vercel static analysis to prevent crashes
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+);
 
 interface Todo {
   id: string;
@@ -63,9 +62,6 @@ export default function AspriDashboard() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
-
-  // Mobile sidebar state
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const [activeFilter, setActiveFilter] = useState<'open' | 'today' | 'overdue' | 'upcoming' | 'done' | 'all'>('open');
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -256,7 +252,7 @@ export default function AspriDashboard() {
       <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4 font-sans antialiased">
         <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/60 p-8 shadow-2xl backdrop-blur-xl">
           <div className="text-center mb-6">
-            <div className="inline-flex p-3 rounded-2xl bg-teal-500/10 border border-teal-500/20 text-teal-400 mb-3">
+            <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mb-3">
               <Sparkles className="w-6 h-6" />
             </div>
             <h1 className="text-xl font-bold text-slate-100">✅ To-Do Chat</h1>
@@ -267,7 +263,7 @@ export default function AspriDashboard() {
             <button
               onClick={() => { setAuthMode('login'); setAuthError(null); }}
               className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'login' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400'
+                authMode === 'login' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'text-slate-400'
               }`}
             >
               Log in
@@ -275,7 +271,7 @@ export default function AspriDashboard() {
             <button
               onClick={() => { setAuthMode('signup'); setAuthError(null); }}
               className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'signup' ? 'bg-teal-500/20 text-teal-300 border border-teal-500/30' : 'text-slate-400'
+                authMode === 'signup' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'text-slate-400'
               }`}
             >
               Sign up
@@ -290,7 +286,7 @@ export default function AspriDashboard() {
           )}
 
           {authMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-300 text-xs flex items-center gap-2">
+            <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2">
               <Sparkles className="w-4 h-4 shrink-0" />
               <span>{authMessage}</span>
             </div>
@@ -307,7 +303,7 @@ export default function AspriDashboard() {
                   value={authEmail}
                   onChange={e => setAuthEmail(e.target.value)}
                   placeholder="michaelsidabutar@gmail.com"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none"
                 />
               </div>
             </div>
@@ -322,7 +318,7 @@ export default function AspriDashboard() {
                   value={authPassword}
                   onChange={e => setAuthPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-teal-500 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none"
                 />
               </div>
             </div>
@@ -330,7 +326,7 @@ export default function AspriDashboard() {
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-slate-100 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-md shadow-emerald-500/10 flex items-center justify-center gap-2"
             >
               {authLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>{authMode === 'login' ? 'Log in' : 'Create account'}</span>
@@ -351,52 +347,32 @@ export default function AspriDashboard() {
   ] as const;
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-teal-500/30 overflow-hidden relative">
+    <div className="flex h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500/30 overflow-hidden">
       
-      {/* Mobile Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-950/80 z-40 md:hidden transition-opacity" 
-          onClick={() => setIsSidebarOpen(false)} 
-        />
-      )}
-
       {/* SIDEBAR */}
-      <aside className={`
-        absolute z-50 h-full w-80 transform transition-transform duration-300 md:relative flex flex-col justify-between shrink-0
-        border-r border-slate-800/60 bg-slate-900 
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-      `}>
+      <aside className="w-80 border-r border-slate-800/60 bg-slate-900/40 backdrop-blur-xl flex flex-col justify-between shrink-0">
         <div className="flex flex-col min-h-0 flex-1">
           
           {/* User Account Bar */}
-          <div className="p-3.5 mx-3 mt-3 rounded-xl border border-slate-800/80 bg-slate-950/50 flex items-center justify-between">
+          <div className="p-3.5 mx-3 mt-3 rounded-xl border border-slate-800/80 bg-slate-900/60 flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-teal-600 flex items-center justify-center font-bold text-slate-100 text-xs">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-bold text-slate-950 text-xs shadow-md shadow-emerald-500/10">
                 MS
               </div>
               <div className="truncate">
                 <p className="text-xs font-semibold text-slate-200 truncate">{sessionUser.email}</p>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   <span className="text-[10px] text-slate-400 font-medium">Pro Workspace</span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              <button 
-                onClick={() => setIsSidebarOpen(false)}
-                className="md:hidden text-slate-400 hover:text-slate-200 p-1.5 hover:bg-slate-800/60 rounded-lg transition-colors"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-              <button 
-                onClick={handleSignOut}
-                className="text-slate-400 hover:text-slate-200 p-1.5 hover:bg-slate-800/60 rounded-lg transition-colors"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            <button 
+              onClick={handleSignOut}
+              className="text-slate-400 hover:text-slate-200 p-1.5 hover:bg-slate-800/60 rounded-lg transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
 
           {/* Quick Filters */}
@@ -408,17 +384,14 @@ export default function AspriDashboard() {
                 return (
                   <button
                     key={key}
-                    onClick={() => {
-                      setActiveFilter(key);
-                      setIsSidebarOpen(false);
-                    }}
+                    onClick={() => setActiveFilter(key)}
                     className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-all ${
                       active 
-                        ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' 
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm' 
                         : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border border-transparent'
                     }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${active ? 'text-teal-400' : 'text-slate-500'}`} />
+                    <Icon className={`w-3.5 h-3.5 ${active ? 'text-emerald-400' : 'text-slate-500'}`} />
                     <span>{label}</span>
                   </button>
                 );
@@ -450,15 +423,15 @@ export default function AspriDashboard() {
                     return (
                       <div 
                         key={todo.id}
-                        className="group relative p-2.5 rounded-xl bg-slate-950/40 border border-slate-800/60 hover:border-slate-700/80 hover:bg-slate-900/80 transition-all"
+                        className="group relative p-2.5 rounded-xl bg-slate-900/40 border border-slate-800/60 hover:border-slate-700/80 hover:bg-slate-900/80 transition-all shadow-sm"
                       >
                         <div className="flex items-start gap-2.5">
                           <button 
                             onClick={() => toggleTodo(todo)}
-                            className="mt-0.5 text-slate-500 hover:text-teal-400 transition-colors"
+                            className="mt-0.5 text-slate-500 hover:text-emerald-400 transition-colors"
                           >
                             {todo.is_done ? (
-                              <CheckCircle2 className="w-4 h-4 text-teal-400" />
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                             ) : (
                               <Circle className="w-4 h-4" />
                             )}
@@ -468,7 +441,7 @@ export default function AspriDashboard() {
                               {todo.task}
                             </p>
                             <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-teal-500/10 border border-teal-500/20 text-teal-300 font-medium">
+                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-medium">
                                 <span>{catEmoji}</span>
                                 <span>{category}</span>
                               </span>
@@ -507,13 +480,13 @@ export default function AspriDashboard() {
                   </div>
                 ) : (
                   notes.map(note => (
-                    <div key={note.id} className="p-3 rounded-xl bg-slate-950/30 border border-slate-800/50 hover:border-slate-700/60 transition-all text-xs text-slate-300 leading-relaxed group">
+                    <div key={note.id} className="p-3 rounded-xl bg-slate-900/30 border border-slate-800/50 hover:border-slate-700/60 transition-all text-xs text-slate-300 leading-relaxed group">
                       <p className="line-clamp-4 font-mono text-[11px] text-slate-300/90">{note.content}</p>
                       <div className="mt-2.5 pt-2 border-t border-slate-800/40 flex items-center justify-between text-[10px] text-slate-500">
                         <span>{new Date(note.created_at).toLocaleDateString()}</span>
                         <button 
                           onClick={() => navigator.clipboard.writeText(note.content)}
-                          className="flex items-center gap-1 text-teal-400 hover:text-teal-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <span>Copy</span>
                           <ExternalLink className="w-2.5 h-2.5" />
@@ -531,24 +504,17 @@ export default function AspriDashboard() {
 
       {/* MAIN WORKSPACE PANEL */}
       <main className="flex-1 flex flex-col h-full bg-slate-950 relative overflow-hidden">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
         {/* Top Header */}
-        <header className="h-14 border-b border-slate-800/60 px-4 md:px-6 flex items-center justify-between bg-slate-950/80 backdrop-blur-md z-10">
+        <header className="h-14 border-b border-slate-800/60 px-6 flex items-center justify-between bg-slate-950/80 backdrop-blur-md z-10">
           <div className="flex items-center gap-2.5">
-            {/* Mobile Hamburger Menu */}
-            <button 
-              onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden p-1 mr-1 text-slate-400 hover:text-slate-200 transition-colors"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="p-1.5 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400 hidden sm:block">
+            <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
               <h1 className="text-sm font-semibold text-slate-100">To-Do Assistant</h1>
-              <p className="text-[10px] text-slate-400">Groq Orchestrator • Low-Latency</p>
+              <p className="text-[10px] text-slate-400">Groq Orchestrator • Low-Latency Response</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -559,7 +525,7 @@ export default function AspriDashboard() {
         </header>
 
         {/* Suggestion Bar */}
-        <div className="px-4 md:px-6 py-2 border-b border-slate-800/40 bg-slate-900/20 flex items-center gap-2 text-xs text-slate-400 overflow-x-auto z-10 no-scrollbar">
+        <div className="px-6 py-2 border-b border-slate-800/40 bg-slate-900/20 flex items-center gap-2 text-xs text-slate-400 overflow-x-auto z-10 no-scrollbar">
           <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1 shrink-0">
             <span>Try</span>
             <ChevronRight className="w-3 h-3" />
@@ -586,7 +552,7 @@ export default function AspriDashboard() {
 
         {/* Alert Banners */}
         {(overdueTodos.length > 0 || todayTodos.length > 0) && (
-          <div className="px-4 md:px-6 pt-3 space-y-2 z-10">
+          <div className="px-6 pt-3 space-y-2 z-10">
             {overdueTodos.length > 0 && (
               <div className="px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
@@ -603,7 +569,7 @@ export default function AspriDashboard() {
         )}
 
         {/* Chat Feed */}
-        <div className="flex-1 overflow-y-auto px-4 md:px-6 py-6 space-y-5 z-10 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5 z-10 custom-scrollbar">
           {messages.map((msg, i) => (
             <div 
               key={i} 
@@ -612,14 +578,14 @@ export default function AspriDashboard() {
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold ${
                 msg.role === 'user' 
                   ? 'bg-slate-800 border border-slate-700 text-slate-200' 
-                  : 'bg-teal-500/10 border border-teal-500/20 text-teal-400'
+                  : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
               }`}>
                 {msg.role === 'user' ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
               </div>
 
-              <div className={`p-4 rounded-2xl text-sm leading-relaxed ${
+              <div className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
                 msg.role === 'user' 
-                  ? 'bg-teal-600 text-slate-100 rounded-tr-none' 
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-none' 
                   : 'bg-slate-900/90 border border-slate-800 text-slate-200 rounded-tl-none'
               }`}>
                 {msg.content}
@@ -629,11 +595,11 @@ export default function AspriDashboard() {
 
           {isSending && (
             <div className="flex items-start gap-3 max-w-3xl">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold bg-teal-500/10 border border-teal-500/20 text-teal-400">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
                 <Bot className="w-3.5 h-3.5" />
               </div>
               <div className="p-4 rounded-2xl text-sm leading-relaxed bg-slate-900/90 border border-slate-800 text-slate-400 rounded-tl-none flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-teal-400" />
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
                 <span>Thinking...</span>
               </div>
             </div>
@@ -641,7 +607,7 @@ export default function AspriDashboard() {
         </div>
 
         {/* Bottom Command Bar */}
-        <div className="p-4 z-10 bg-slate-950">
+        <div className="p-4 z-10">
           <form 
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}
             className="max-w-3xl mx-auto relative flex items-center"
@@ -651,12 +617,12 @@ export default function AspriDashboard() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Tell me what to do..."
-              className="w-full bg-slate-900 border border-slate-800 focus:border-teal-500/80 rounded-2xl pl-4 pr-12 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-teal-500/40 transition-all"
+              className="w-full bg-slate-900/90 border border-slate-800 focus:border-emerald-500/80 rounded-2xl pl-4 pr-12 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 shadow-xl backdrop-blur-xl transition-all"
             />
             <button
               type="submit"
               disabled={isSending || !input.trim()}
-              className="absolute right-2 p-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-30 disabled:hover:bg-teal-600 text-slate-100 font-bold rounded-xl transition-all"
+              className="absolute right-2 p-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:hover:bg-emerald-500 text-slate-950 font-bold rounded-xl transition-all shadow-md shadow-emerald-500/20"
             >
               <Send className="w-4 h-4" />
             </button>
