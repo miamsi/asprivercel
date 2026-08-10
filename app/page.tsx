@@ -28,9 +28,10 @@ import {
 import { humanizeDue } from '@/lib/time_utils';
 import { CATEGORY_EMOJI, PRIORITY_EMOJI } from '@/lib/connectors/todos';
 
+// FIXED: Using a valid placeholder URL bypasses the Next.js static generation error on Vercel.
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
 );
 
 interface Todo {
@@ -64,7 +65,6 @@ export default function AspriDashboard() {
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
 
-  // Sidebar toggle state (collapsible & responsive overlay)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const [activeFilter, setActiveFilter] = useState<'open' | 'today' | 'overdue' | 'upcoming' | 'done' | 'all'>('open');
@@ -90,7 +90,6 @@ export default function AspriDashboard() {
     scrollToBottom();
   }, [messages, isSending]);
 
-  // Handle responsive sidebar behavior on initial load
   useEffect(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setIsSidebarOpen(false);
@@ -374,7 +373,7 @@ export default function AspriDashboard() {
         />
       )}
 
-      {/* SIDEBAR (Collapsible & Mobile Responsive Apple Style) */}
+      {/* SIDEBAR */}
       <aside 
         className={`fixed md:relative inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-white/90 backdrop-blur-2xl border-r border-slate-200/60 flex flex-col justify-between shrink-0 transition-transform duration-300 ease-out ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:hidden'
@@ -382,7 +381,6 @@ export default function AspriDashboard() {
       >
         <div className="flex flex-col min-h-0 flex-1">
           
-          {/* Sidebar Top Header */}
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-teal-600 to-teal-400 flex items-center justify-center font-bold text-white text-sm shadow-sm shrink-0">
@@ -404,7 +402,6 @@ export default function AspriDashboard() {
             </button>
           </div>
 
-          {/* Quick Filters */}
           <div className="px-3 pt-4 pb-2">
             <p className="px-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Views</p>
             <div className="grid grid-cols-2 gap-1.5">
@@ -433,10 +430,7 @@ export default function AspriDashboard() {
             </div>
           </div>
 
-          {/* Scrollable Container */}
           <div className="flex-1 overflow-y-auto px-3 py-2 space-y-5 custom-scrollbar">
-            
-            {/* Task Section */}
             <div>
               <div className="flex items-center justify-between px-2 mb-2">
                 <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Tasks</span>
@@ -498,7 +492,6 @@ export default function AspriDashboard() {
               </div>
             </div>
 
-            {/* Notes Section */}
             <div>
               <div className="flex items-center justify-between px-2 mb-2">
                 <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
@@ -539,7 +532,6 @@ export default function AspriDashboard() {
       {/* MAIN WORKSPACE PANEL */}
       <main className="flex-1 flex flex-col h-full relative">
 
-        {/* Clean iOS Style Header */}
         <header className="h-14 px-4 sm:px-6 flex items-center justify-between bg-white/80 backdrop-blur-xl border-b border-slate-200/60 z-20 shrink-0">
           <div className="flex items-center gap-3">
             <button
@@ -557,7 +549,6 @@ export default function AspriDashboard() {
           </div>
         </header>
 
-        {/* Alert Banners (Sticky Below Header) */}
         {(overdueTodos.length > 0 || todayTodos.length > 0) && (
           <div className="px-4 sm:px-6 pt-3 space-y-2 z-10 w-full max-w-3xl mx-auto shrink-0">
             {overdueTodos.length > 0 && (
@@ -575,7 +566,6 @@ export default function AspriDashboard() {
           </div>
         )}
 
-        {/* Chat Feed (Scrollable Region) */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5 w-full max-w-3xl mx-auto custom-scrollbar">
           {messages.map((msg, i) => (
             <div 
@@ -610,15 +600,12 @@ export default function AspriDashboard() {
             </div>
           )}
           
-          {/* Invisible element to auto-scroll to */}
           <div ref={chatEndRef} className="h-2" />
         </div>
 
-        {/* Bottom Stickied Input Area (Always Visible) */}
         <div className="bg-[#F2F2F7]/90 backdrop-blur-xl border-t border-slate-200/60 p-3 sm:p-4 z-20 shrink-0 pb-safe">
           <div className="max-w-3xl mx-auto w-full space-y-3">
             
-            {/* iOS Style Horizontal Scroll Chips */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 text-xs">
               <button 
                 onClick={() => handleSend("Remind me to check my inbox about performance review tomorrow at 10am")}
@@ -640,7 +627,6 @@ export default function AspriDashboard() {
               </button>
             </div>
 
-            {/* Apple Input Pill */}
             <form 
               onSubmit={(e) => { e.preventDefault(); handleSend(); }}
               className="relative flex items-center"
