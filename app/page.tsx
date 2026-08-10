@@ -1,4 +1,3 @@
-// Version 1
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -19,7 +18,6 @@ import {
   User,
   ExternalLink,
   ChevronRight,
-  Tag,
   AlertTriangle,
   Lock,
   Mail,
@@ -30,7 +28,7 @@ import {
 import { humanizeDue } from '@/lib/time_utils';
 import { CATEGORY_EMOJI, PRIORITY_EMOJI } from '@/lib/connectors/todos';
 
-// Build-safe initialization: Uses dummy strings during Vercel build to prevent crashes
+// Build-safe initialization: Uses dummy strings during Vercel static analysis to prevent crashes
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 const supabase = createClient(supabaseUrl, supabaseKey);
@@ -412,7 +410,7 @@ export default function AspriDashboard() {
                     key={key}
                     onClick={() => {
                       setActiveFilter(key);
-                      setIsSidebarOpen(false); // Auto-close on mobile when filter selected
+                      setIsSidebarOpen(false);
                     }}
                     className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-all ${
                       active 
