@@ -30,10 +30,10 @@ import {
 import { humanizeDue } from '@/lib/time_utils';
 import { CATEGORY_EMOJI, PRIORITY_EMOJI } from '@/lib/connectors/todos';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+// Build-safe initialization: Uses dummy strings during Vercel build to prevent crashes
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface Todo {
   id: string;
