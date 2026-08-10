@@ -302,7 +302,7 @@ export default function AspriDashboard() {
                   required
                   value={authEmail}
                   onChange={e => setAuthEmail(e.target.value)}
-                  placeholder="michaelsidabutar@gmail.com"
+                  placeholder="your email"
                   className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none"
                 />
               </div>
