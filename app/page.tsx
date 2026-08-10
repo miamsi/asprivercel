@@ -23,7 +23,9 @@ import {
   Mail,
   Loader2,
   Menu,
-  X
+  X,
+  Copy,
+  Check
 } from 'lucide-react';
 import { humanizeDue } from '@/lib/time_utils';
 import { CATEGORY_EMOJI, PRIORITY_EMOJI } from '@/lib/connectors/todos';
@@ -64,8 +66,9 @@ export default function AspriDashboard() {
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
 
-  // Sidebar toggle state (collapsible & responsive overlay)
+  // Responsive Hideable Sidebar
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [copiedNoteId, setCopiedNoteId] = useState<string | null>(null);
 
   const [activeFilter, setActiveFilter] = useState<'open' | 'today' | 'overdue' | 'upcoming' | 'done' | 'all'>('open');
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -74,14 +77,14 @@ export default function AspriDashboard() {
   const [notes, setNotes] = useState<Note[]>([]);
 
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: "Hi! How can I help you manage your tasks and notes today?" }
+    { role: 'assistant', content: "Halo! Ada yang bisa saya bantu untuk merapikan tugas atau catatanmu hari ini?" }
   ]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
 
-  // Handle responsive sidebar behavior on initial load
+  // Auto-collapse sidebar on mobile screen size initial load
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setIsSidebarOpen(false);
     }
   }, []);
@@ -208,7 +211,7 @@ export default function AspriDashboard() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setSessionUser(null);
-    setMessages([{ role: 'assistant', content: "Hi! How can I help you manage your tasks and notes today?" }]);
+    setMessages([{ role: 'assistant', content: "Halo! Ada yang bisa saya bantu untuk merapikan tugas atau catatanmu hari ini?" }]);
   };
 
   const toggleTodo = async (todo: Todo) => {
@@ -222,6 +225,12 @@ export default function AspriDashboard() {
       .eq('id', todo.id);
 
     refreshAllData(sessionUser.id);
+  };
+
+  const handleCopyNote = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedNoteId(id);
+    setTimeout(() => setCopiedNoteId(null), 2000);
   };
 
   const handleSend = async (textToSend?: string) => {
@@ -258,24 +267,24 @@ export default function AspriDashboard() {
     }
   };
 
-  // Auth Screen (Pastel Teal Flat Theme)
+  // Auth Screen (Professional Minimalist UI)
   if (!sessionUser) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-teal-50/80 p-4 font-sans antialiased text-teal-950">
-        <div className="w-full max-w-md rounded-2xl border border-teal-100 bg-white p-6 sm:p-8 shadow-sm">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50/60 p-4 font-sans text-slate-800 antialiased">
+        <div className="w-full max-w-sm rounded-2xl border border-slate-200/80 bg-white p-7 shadow-xl shadow-slate-200/50">
           <div className="text-center mb-6">
-            <div className="inline-flex p-3 rounded-2xl bg-teal-100/70 border border-teal-200/60 text-teal-700 mb-3">
-              <Sparkles className="w-6 h-6" />
+            <div className="inline-flex p-3 rounded-2xl bg-teal-50 text-teal-700 border border-teal-100/80 mb-3">
+              <Sparkles className="w-5 h-5 text-teal-600" />
             </div>
-            <h1 className="text-xl font-bold text-teal-950">✅ To-Do Chat</h1>
-            <p className="text-xs text-teal-600/80 mt-1">Your to-do list, managed entirely by chatting.</p>
+            <h1 className="text-lg font-bold tracking-tight text-slate-900">To-Do Assistant</h1>
+            <p className="text-xs text-slate-500 mt-1">Kelola tugas & catatan harianmu lewat instruksi percakapan.</p>
           </div>
 
-          <div className="flex rounded-xl bg-teal-50/80 p-1 border border-teal-100 mb-6">
+          <div className="flex rounded-xl bg-slate-100/80 p-1 border border-slate-200/50 mb-5">
             <button
               onClick={() => { setAuthMode('login'); setAuthError(null); }}
               className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'login' ? 'bg-white text-teal-800 shadow-sm border border-teal-100' : 'text-teal-600 hover:text-teal-900'
+                authMode === 'login' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Log in
@@ -283,7 +292,7 @@ export default function AspriDashboard() {
             <button
               onClick={() => { setAuthMode('signup'); setAuthError(null); }}
               className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'signup' ? 'bg-white text-teal-800 shadow-sm border border-teal-100' : 'text-teal-600 hover:text-teal-900'
+                authMode === 'signup' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Sign up
@@ -291,46 +300,46 @@ export default function AspriDashboard() {
           </div>
 
           {authError && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
+            <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200/60 text-rose-700 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
               <span>{authError}</span>
             </div>
           )}
 
           {authMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs flex items-center gap-2">
-              <Sparkles className="w-4 h-4 shrink-0" />
+            <div className="mb-4 p-3 rounded-xl bg-teal-50 border border-teal-200/60 text-teal-800 text-xs flex items-center gap-2">
+              <Sparkles className="w-4 h-4 shrink-0 text-teal-600" />
               <span>{authMessage}</span>
             </div>
           )}
 
-          <form onSubmit={handleAuth} className="space-y-4">
+          <form onSubmit={handleAuth} className="space-y-3.5">
             <div>
-              <label className="text-[11px] font-semibold text-teal-700 block mb-1.5">Email address</label>
+              <label className="text-[11px] font-medium text-slate-600 block mb-1">Email address</label>
               <div className="relative flex items-center">
-                <Mail className="w-4 h-4 text-teal-400 absolute left-3" />
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3" />
                 <input
                   type="email"
                   required
                   value={authEmail}
                   onChange={e => setAuthEmail(e.target.value)}
-                  placeholder="your email"
-                  className="w-full bg-teal-50/50 border border-teal-200/80 focus:border-teal-500 rounded-xl pl-9 pr-4 py-2.5 text-xs text-teal-950 placeholder-teal-400 focus:outline-none transition-all"
+                  placeholder="name@company.com"
+                  className="w-full bg-slate-50/50 border border-slate-200 focus:border-teal-500 focus:bg-white rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/10 transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-teal-700 block mb-1.5">Password</label>
+              <label className="text-[11px] font-medium text-slate-600 block mb-1">Password</label>
               <div className="relative flex items-center">
-                <Lock className="w-4 h-4 text-teal-400 absolute left-3" />
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3" />
                 <input
                   type="password"
                   required
                   value={authPassword}
                   onChange={e => setAuthPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-teal-50/50 border border-teal-200/80 focus:border-teal-500 rounded-xl pl-9 pr-4 py-2.5 text-xs text-teal-950 placeholder-teal-400 focus:outline-none transition-all"
+                  className="w-full bg-slate-50/50 border border-slate-200 focus:border-teal-500 focus:bg-white rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/10 transition-all"
                 />
               </div>
             </div>
@@ -338,10 +347,10 @@ export default function AspriDashboard() {
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-all shadow-sm flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-medium rounded-xl text-xs transition-all shadow-sm flex items-center justify-center gap-2 mt-2"
             >
               {authLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>{authMode === 'login' ? 'Log in' : 'Create account'}</span>
+              <span>{authMode === 'login' ? 'Sign in' : 'Create account'}</span>
             </button>
           </form>
         </div>
@@ -359,42 +368,42 @@ export default function AspriDashboard() {
   ] as const;
 
   return (
-    <div className="flex h-screen bg-teal-50/40 text-teal-950 font-sans antialiased selection:bg-teal-200/60 overflow-hidden relative">
+    <div className="flex h-screen bg-slate-50/50 text-slate-800 font-sans antialiased overflow-hidden relative">
       
-      {/* Mobile Drawer Overlay Backdrop */}
+      {/* Mobile Sidebar Overlay Backdrop */}
       {isSidebarOpen && (
         <div 
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-teal-950/20 backdrop-blur-xs z-30 md:hidden"
+          className="fixed inset-0 bg-slate-900/20 backdrop-blur-xs z-30 lg:hidden"
         />
       )}
 
-      {/* SIDEBAR (Collapsible & Mobile Responsive) */}
+      {/* SIDEBAR (Drawer Mode on Mobile, Expandable/Collapsible on Desktop) */}
       <aside 
-        className={`fixed md:relative inset-y-0 left-0 z-40 w-80 max-w-[85vw] border-r border-teal-100 bg-white flex flex-col justify-between shrink-0 transition-transform duration-300 ease-in-out ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:hidden'
+        className={`fixed lg:relative inset-y-0 left-0 z-40 w-80 max-w-[85vw] border-r border-slate-200/80 bg-white flex flex-col justify-between shrink-0 transition-all duration-300 ease-in-out ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:hidden'
         }`}
       >
-        <div className="flex flex-col min-h-0 flex-1">
+        <div className="flex flex-col h-full min-h-0">
           
-          {/* Sidebar Top Header with Close Button for Mobile */}
-          <div className="p-3.5 mx-3 mt-3 rounded-xl border border-teal-100 bg-teal-50/50 flex items-center justify-between">
+          {/* User Account Bar */}
+          <div className="p-3 mx-3 mt-3 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-teal-600 flex items-center justify-center font-bold text-white text-xs shadow-xs shrink-0">
-                MS
+              <div className="w-7 h-7 rounded-lg bg-teal-600 flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-xs">
+                {sessionUser.email.slice(0, 2).toUpperCase()}
               </div>
               <div className="truncate">
-                <p className="text-xs font-semibold text-teal-950 truncate">{sessionUser.email}</p>
+                <p className="text-xs font-semibold text-slate-800 truncate">{sessionUser.email}</p>
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
-                  <span className="text-[10px] text-teal-600 font-medium">Pro Workspace</span>
+                  <span className="text-[10px] text-slate-500 font-medium">Pro Workspace</span>
                 </div>
               </div>
             </div>
             <button 
               onClick={handleSignOut}
               title="Sign out"
-              className="text-teal-600 hover:text-teal-950 p-1.5 hover:bg-teal-100/60 rounded-lg transition-colors ml-1 shrink-0"
+              className="text-slate-400 hover:text-slate-700 p-1.5 hover:bg-slate-200/50 rounded-lg transition-colors ml-1 shrink-0"
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>
@@ -402,8 +411,8 @@ export default function AspriDashboard() {
 
           {/* Quick Filters */}
           <div className="px-3 pt-4 pb-2">
-            <p className="px-2 text-[10px] font-bold text-teal-600/70 uppercase tracking-wider mb-2">Filters</p>
-            <div className="grid grid-cols-2 gap-1.5">
+            <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Filters</p>
+            <div className="grid grid-cols-2 gap-1">
               {filterOptions.map(({ key, label, icon: Icon }) => {
                 const active = activeFilter === key;
                 return (
@@ -411,18 +420,17 @@ export default function AspriDashboard() {
                     key={key}
                     onClick={() => {
                       setActiveFilter(key);
-                      // On small mobile screens, optionally auto-close on selection:
-                      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
                         setIsSidebarOpen(false);
                       }
                     }}
-                    className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-all ${
+                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       active 
-                        ? 'bg-teal-600 text-white font-semibold shadow-xs' 
-                        : 'text-teal-700 hover:text-teal-950 hover:bg-teal-100/50 border border-transparent'
+                        ? 'bg-teal-50 text-teal-800 border border-teal-200/80 font-semibold shadow-2xs' 
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60 border border-transparent'
                     }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-teal-500'}`} />
+                    <Icon className={`w-3.5 h-3.5 ${active ? 'text-teal-600' : 'text-slate-400'}`} />
                     <span>{label}</span>
                   </button>
                 );
@@ -431,18 +439,18 @@ export default function AspriDashboard() {
           </div>
 
           {/* Scrollable Container */}
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-5 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-4 custom-scrollbar">
             
             {/* Task Section */}
             <div>
               <div className="flex items-center justify-between px-2 mb-2">
-                <span className="text-[10px] font-bold text-teal-600/70 uppercase tracking-wider">Tasks</span>
-                <span className="text-[10px] text-teal-600 font-mono">{todos.length} Active</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tasks</span>
+                <span className="text-[10px] text-slate-500 font-mono bg-slate-100 px-1.5 py-0.5 rounded">{todos.length}</span>
               </div>
               <div className="space-y-1.5">
                 {todos.length === 0 ? (
-                  <div className="p-3 text-center rounded-xl border border-dashed border-teal-200/80 text-xs text-teal-500">
-                    Nothing here — ask me to add something!
+                  <div className="p-4 text-center rounded-xl border border-dashed border-slate-200 text-xs text-slate-400">
+                    Tidak ada tugas di kategori ini
                   </div>
                 ) : (
                   todos.map(todo => {
@@ -454,12 +462,12 @@ export default function AspriDashboard() {
                     return (
                       <div 
                         key={todo.id}
-                        className="group relative p-2.5 rounded-xl bg-white border border-teal-100 hover:border-teal-200 hover:shadow-xs transition-all"
+                        className="group relative p-2.5 rounded-xl bg-white border border-slate-200/70 hover:border-teal-200 hover:shadow-xs transition-all"
                       >
                         <div className="flex items-start gap-2.5">
                           <button 
                             onClick={() => toggleTodo(todo)}
-                            className="mt-0.5 text-teal-400 hover:text-teal-600 transition-colors"
+                            className="mt-0.5 text-slate-300 hover:text-teal-600 transition-colors"
                           >
                             {todo.is_done ? (
                               <CheckCircle2 className="w-4 h-4 text-teal-600" />
@@ -468,20 +476,20 @@ export default function AspriDashboard() {
                             )}
                           </button>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-medium leading-snug ${todo.is_done ? 'line-through text-teal-400' : 'text-teal-950'}`}>
+                            <p className={`text-xs font-normal leading-relaxed ${todo.is_done ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                               {todo.task}
                             </p>
                             <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-teal-50 border border-teal-200/60 text-teal-800 font-medium">
+                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200/60 text-slate-600 font-medium">
                                 <span>{catEmoji}</span>
-                                <span>{category}</span>
+                                <span className="capitalize">{category}</span>
                               </span>
-                              <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-teal-100/60 text-teal-800 font-medium">
+                              <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">
                                 <span>{priorityEmoji}</span>
                               </span>
                               {todo.due_at && (
-                                <span className="inline-flex items-center gap-1 text-[10px] text-teal-600 font-mono ml-auto">
-                                  <Clock className="w-2.5 h-2.5 text-teal-500" />
+                                <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 font-mono ml-auto">
+                                  <Clock className="w-2.5 h-2.5 text-slate-400" />
                                   {humanizeDue(todo.due_at)}
                                 </span>
                               )}
@@ -498,29 +506,38 @@ export default function AspriDashboard() {
             {/* Notes Section */}
             <div>
               <div className="flex items-center justify-between px-2 mb-2">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-teal-600/70 uppercase tracking-wider">
-                  <FileText className="w-3 h-3 text-teal-500" />
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <FileText className="w-3 h-3 text-slate-400" />
                   <span>Notes</span>
                 </div>
-                <span className="text-[10px] text-teal-600 font-mono">{notes.length} saved</span>
+                <span className="text-[10px] text-slate-500 font-mono bg-slate-100 px-1.5 py-0.5 rounded">{notes.length}</span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {notes.length === 0 ? (
-                  <div className="p-3 text-center rounded-xl border border-dashed border-teal-200/80 text-xs text-teal-500">
-                    No notes yet — try "note that..."
+                  <div className="p-4 text-center rounded-xl border border-dashed border-slate-200 text-xs text-slate-400">
+                    Belum ada catatan tercatat
                   </div>
                 ) : (
                   notes.map(note => (
-                    <div key={note.id} className="p-3 rounded-xl bg-white border border-teal-100 transition-all text-xs text-teal-800 leading-relaxed group">
-                      <p className="line-clamp-4 font-mono text-[11px] text-teal-900">{note.content}</p>
-                      <div className="mt-2.5 pt-2 border-t border-teal-100 flex items-center justify-between text-[10px] text-teal-500">
+                    <div key={note.id} className="p-3 rounded-xl bg-white border border-slate-200/70 hover:border-slate-300 transition-all text-xs text-slate-700 leading-relaxed group">
+                      <p className="line-clamp-4 text-xs font-normal text-slate-700 whitespace-pre-wrap">{note.content}</p>
+                      <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
                         <span>{new Date(note.created_at).toLocaleDateString()}</span>
                         <button 
-                          onClick={() => navigator.clipboard.writeText(note.content)}
-                          className="flex items-center gap-1 text-teal-600 hover:text-teal-800 transition-opacity"
+                          onClick={() => handleCopyNote(note.id, note.content)}
+                          className="flex items-center gap-1 text-slate-400 hover:text-teal-600 transition-colors"
                         >
-                          <span>Copy</span>
-                          <ExternalLink className="w-2.5 h-2.5" />
+                          {copiedNoteId === note.id ? (
+                            <>
+                              <Check className="w-3 h-3 text-teal-600" />
+                              <span className="text-teal-600 font-medium">Copied</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>Copy</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -534,61 +551,60 @@ export default function AspriDashboard() {
       </aside>
 
       {/* MAIN WORKSPACE PANEL */}
-      <main className="flex-1 flex flex-col h-full bg-teal-50/20 relative overflow-hidden">
+      <main className="flex-1 flex flex-col h-full bg-slate-50/50 relative overflow-hidden">
 
         {/* Top Header */}
-        <header className="h-14 border-b border-teal-100 px-4 sm:px-6 flex items-center justify-between bg-white/90 backdrop-blur-md z-10">
+        <header className="h-14 border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between bg-white/90 backdrop-blur-md z-10">
           <div className="flex items-center gap-3">
-            {/* Sidebar Toggle Button */}
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 transition-colors border border-teal-100"
-              title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/70 text-slate-600 transition-colors border border-slate-200/60"
+              title={isSidebarOpen ? "Sembunyikan sidebar" : "Tampilkan sidebar"}
             >
               {isSidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
 
             <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-teal-100 text-teal-700">
+              <div className="p-1 rounded-lg bg-teal-50 border border-teal-100 text-teal-600">
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <h1 className="text-xs sm:text-sm font-semibold text-teal-950">To-Do Assistant</h1>
-                <p className="text-[10px] text-teal-600 hidden sm:block">Groq Orchestrator • Low-Latency Response</p>
+                <h1 className="text-xs sm:text-sm font-semibold text-slate-900">To-Do Assistant</h1>
+                <p className="text-[10px] text-slate-400 hidden sm:block">AI Task & Note Assistant</p>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-full bg-teal-100/60 border border-teal-200/50 text-[10px] font-mono text-teal-700">
+            <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-mono text-slate-500">
               v1.0 (Next.js)
             </span>
           </div>
         </header>
 
-        {/* Suggestion Bar */}
-        <div className="px-4 sm:px-6 py-2 border-b border-teal-100 bg-teal-50/50 flex items-center gap-2 text-xs text-teal-700 overflow-x-auto z-10 no-scrollbar">
-          <span className="text-[11px] font-semibold text-teal-600/80 uppercase tracking-wider flex items-center gap-1 shrink-0">
-            <span>Try</span>
-            <ChevronRight className="w-3 h-3" />
+        {/* Suggestion Quick Commands */}
+        <div className="px-4 sm:px-6 py-2 border-b border-slate-200/60 bg-white/50 flex items-center gap-2 text-xs text-slate-600 overflow-x-auto z-10 no-scrollbar">
+          <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider flex items-center gap-0.5 shrink-0">
+            <span>Contoh</span>
+            <ChevronRight className="w-3 h-3 text-slate-400" />
           </span>
           <button 
-            onClick={() => handleSend("remind me to check my inbox about performance review tomorrow at 10am")}
-            className="px-3 py-1 rounded-lg bg-white border border-teal-100 hover:bg-teal-100/60 text-teal-800 text-xs transition-all whitespace-nowrap shadow-xs shrink-0"
+            onClick={() => handleSend("ingatkan saya untuk cek inbox review esok jam 10 pagi")}
+            className="px-3 py-1 rounded-lg bg-white border border-slate-200/80 hover:bg-slate-100/60 text-slate-700 text-xs transition-all whitespace-nowrap shadow-2xs shrink-0"
           >
-            "remind me to check my inbox about performance review tomorrow at 10am"
+            "ingatkan saya untuk cek inbox review esok jam 10 pagi"
           </button>
           <button 
-            onClick={() => handleSend("what's due today?")}
-            className="px-3 py-1 rounded-lg bg-white border border-teal-100 hover:bg-teal-100/60 text-teal-800 text-xs transition-all whitespace-nowrap shadow-xs shrink-0"
+            onClick={() => handleSend("apa saja tugas yang due hari ini?")}
+            className="px-3 py-1 rounded-lg bg-white border border-slate-200/80 hover:bg-slate-100/60 text-slate-700 text-xs transition-all whitespace-nowrap shadow-2xs shrink-0"
           >
-            "what's due today?"
+            "apa saja tugas yang due hari ini?"
           </button>
           <button 
-            onClick={() => handleSend("note that the wifi password is x")}
-            className="px-3 py-1 rounded-lg bg-white border border-teal-100 hover:bg-teal-100/60 text-teal-800 text-xs transition-all whitespace-nowrap shadow-xs shrink-0"
+            onClick={() => handleSend("catat bahwa wifi password kantor x")}
+            className="px-3 py-1 rounded-lg bg-white border border-slate-200/80 hover:bg-slate-100/60 text-slate-700 text-xs transition-all whitespace-nowrap shadow-2xs shrink-0"
           >
-            "note that the wifi password is x"
+            "catat bahwa wifi password kantor x"
           </button>
         </div>
 
@@ -596,39 +612,39 @@ export default function AspriDashboard() {
         {(overdueTodos.length > 0 || todayTodos.length > 0) && (
           <div className="px-4 sm:px-6 pt-3 space-y-2 z-10">
             {overdueTodos.length > 0 && (
-              <div className="px-3 py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                <span>⏰ {overdueTodos.length} overdue: {overdueTodos.slice(0, 3).map(t => t.task).join(', ')}{overdueTodos.length > 3 ? '...' : ''}</span>
+              <div className="px-3.5 py-2 rounded-xl bg-rose-50 border border-rose-200/70 text-rose-800 text-xs flex items-center gap-2 shadow-2xs">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                <span>⏰ <strong>{overdueTodos.length} overdue:</strong> {overdueTodos.slice(0, 3).map(t => t.task).join(', ')}{overdueTodos.length > 3 ? '...' : ''}</span>
               </div>
             )}
             {todayTodos.length > 0 && (
-              <div className="px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
-                <Clock className="w-4 h-4 shrink-0 text-amber-600" />
-                <span>📅 Due today: {todayTodos.slice(0, 3).map(t => t.task).join(', ')}{todayTodos.length > 3 ? '...' : ''}</span>
+              <div className="px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200/70 text-amber-800 text-xs flex items-center gap-2 shadow-2xs">
+                <Clock className="w-4 h-4 shrink-0 text-amber-500" />
+                <span>📅 <strong>Due hari ini:</strong> {todayTodos.slice(0, 3).map(t => t.task).join(', ')}{todayTodos.length > 3 ? '...' : ''}</span>
               </div>
             )}
           </div>
         )}
 
         {/* Chat Feed */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5 z-10 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-4 z-10 custom-scrollbar">
           {messages.map((msg, i) => (
             <div 
               key={i} 
-              className={`flex items-start gap-2.5 sm:gap-3 max-w-3xl ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
+              className={`flex items-start gap-2.5 sm:gap-3 max-w-2xl ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
             >
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold ${
                 msg.role === 'user' 
-                  ? 'bg-teal-600 text-white' 
-                  : 'bg-teal-100/80 border border-teal-200/60 text-teal-800'
+                  ? 'bg-slate-800 text-white' 
+                  : 'bg-teal-50 border border-teal-200/70 text-teal-700'
               }`}>
                 {msg.role === 'user' ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
               </div>
 
-              <div className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed ${
+              <div className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                 msg.role === 'user' 
                   ? 'bg-teal-600 text-white rounded-tr-none shadow-xs' 
-                  : 'bg-white border border-teal-100 text-teal-950 rounded-tl-none shadow-xs'
+                  : 'bg-white border border-slate-200/80 text-slate-800 rounded-tl-none shadow-xs'
               }`}>
                 {msg.content}
               </div>
@@ -636,37 +652,37 @@ export default function AspriDashboard() {
           ))}
 
           {isSending && (
-            <div className="flex items-start gap-2.5 sm:gap-3 max-w-3xl">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold bg-teal-100/80 border border-teal-200/60 text-teal-800">
+            <div className="flex items-start gap-2.5 sm:gap-3 max-w-2xl">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold bg-teal-50 border border-teal-200/70 text-teal-700">
                 <Bot className="w-3.5 h-3.5" />
               </div>
-              <div className="p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed bg-white border border-teal-100 text-teal-600 rounded-tl-none shadow-xs flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
-                <span>Thinking...</span>
+              <div className="p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed bg-white border border-slate-200/80 text-slate-500 rounded-tl-none shadow-xs flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-600" />
+                <span>Memproses instruksi...</span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Bottom Command Bar */}
-        <div className="p-3 sm:p-4 z-10 bg-white/40 backdrop-blur-xs border-t border-teal-100">
+        {/* Command Bar */}
+        <div className="p-3 sm:p-4 z-10 bg-white/70 backdrop-blur-md border-t border-slate-200/80">
           <form 
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-            className="max-w-3xl mx-auto relative flex items-center"
+            className="max-w-2xl mx-auto relative flex items-center"
           >
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Tell me what to do..."
-              className="w-full bg-white border border-teal-200/80 focus:border-teal-500 rounded-2xl pl-4 pr-12 py-2.5 sm:py-3 text-xs sm:text-sm text-teal-950 placeholder-teal-400 focus:outline-none focus:ring-1 focus:ring-teal-400 shadow-xs transition-all"
+              placeholder="Tulis tugas atau catatan baru..."
+              className="w-full bg-white border border-slate-200 focus:border-teal-500 rounded-2xl pl-4 pr-12 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/10 shadow-xs transition-all"
             />
             <button
               type="submit"
               disabled={isSending || !input.trim()}
-              className="absolute right-2 p-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-30 disabled:hover:bg-teal-600 text-white font-bold rounded-xl transition-all shadow-xs"
+              className="absolute right-1.5 p-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-30 disabled:hover:bg-teal-600 text-white font-medium rounded-xl transition-all shadow-xs"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-3.5 h-3.5" />
             </button>
           </form>
         </div>
