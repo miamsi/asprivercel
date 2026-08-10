@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { 
   CheckCircle2, 
@@ -23,9 +23,7 @@ import {
   Mail,
   Loader2,
   Menu,
-  X,
-  Copy,
-  Check
+  X
 } from 'lucide-react';
 import { humanizeDue } from '@/lib/time_utils';
 import { CATEGORY_EMOJI, PRIORITY_EMOJI } from '@/lib/connectors/todos';
@@ -66,9 +64,8 @@ export default function AspriDashboard() {
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
 
-  // Responsive Hideable Sidebar
+  // Sidebar toggle state (collapsible & responsive overlay)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [copiedNoteId, setCopiedNoteId] = useState<string | null>(null);
 
   const [activeFilter, setActiveFilter] = useState<'open' | 'today' | 'overdue' | 'upcoming' | 'done' | 'all'>('open');
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -77,14 +74,25 @@ export default function AspriDashboard() {
   const [notes, setNotes] = useState<Note[]>([]);
 
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: "Halo! Ada yang bisa saya bantu untuk merapikan tugas atau catatanmu hari ini?" }
+    { role: 'assistant', content: "Hi! How can I help you manage your tasks and notes today?" }
   ]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
 
-  // Auto-collapse sidebar on mobile screen size initial load
+  // Auto-scroll reference
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+    scrollToBottom();
+  }, [messages, isSending]);
+
+  // Handle responsive sidebar behavior on initial load
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
   }, []);
@@ -211,7 +219,7 @@ export default function AspriDashboard() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setSessionUser(null);
-    setMessages([{ role: 'assistant', content: "Halo! Ada yang bisa saya bantu untuk merapikan tugas atau catatanmu hari ini?" }]);
+    setMessages([{ role: 'assistant', content: "Hi! How can I help you manage your tasks and notes today?" }]);
   };
 
   const toggleTodo = async (todo: Todo) => {
@@ -225,12 +233,6 @@ export default function AspriDashboard() {
       .eq('id', todo.id);
 
     refreshAllData(sessionUser.id);
-  };
-
-  const handleCopyNote = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedNoteId(id);
-    setTimeout(() => setCopiedNoteId(null), 2000);
   };
 
   const handleSend = async (textToSend?: string) => {
@@ -267,90 +269,84 @@ export default function AspriDashboard() {
     }
   };
 
-  // Auth Screen (Professional Minimalist UI)
+  // Auth Screen (Apple iOS Style)
   if (!sessionUser) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50/60 p-4 font-sans text-slate-800 antialiased">
-        <div className="w-full max-w-sm rounded-2xl border border-slate-200/80 bg-white p-7 shadow-xl shadow-slate-200/50">
-          <div className="text-center mb-6">
-            <div className="inline-flex p-3 rounded-2xl bg-teal-50 text-teal-700 border border-teal-100/80 mb-3">
-              <Sparkles className="w-5 h-5 text-teal-600" />
+      <div className="flex min-h-screen items-center justify-center bg-[#F2F2F7] p-5 font-sans antialiased text-slate-900">
+        <div className="w-full max-w-sm rounded-[32px] bg-white/80 p-8 shadow-xl backdrop-blur-2xl border border-white/40">
+          <div className="text-center mb-8">
+            <div className="inline-flex p-3.5 rounded-2xl bg-teal-500/10 text-teal-600 mb-3">
+              <Sparkles className="w-7 h-7" />
             </div>
-            <h1 className="text-lg font-bold tracking-tight text-slate-900">To-Do Assistant</h1>
-            <p className="text-xs text-slate-500 mt-1">Kelola tugas & catatan harianmu lewat instruksi percakapan.</p>
+            <h1 className="text-2xl font-semibold tracking-tight">Assistant</h1>
+            <p className="text-sm text-slate-500 mt-1 font-normal">Manage tasks naturally.</p>
           </div>
 
-          <div className="flex rounded-xl bg-slate-100/80 p-1 border border-slate-200/50 mb-5">
+          <div className="flex rounded-full bg-[#E5E5EA] p-1 mb-6">
             <button
               onClick={() => { setAuthMode('login'); setAuthError(null); }}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'login' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              className={`flex-1 py-2 text-xs font-semibold rounded-full transition-all ${
+                authMode === 'login' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              Log in
+              Sign In
             </button>
             <button
               onClick={() => { setAuthMode('signup'); setAuthError(null); }}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'signup' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              className={`flex-1 py-2 text-xs font-semibold rounded-full transition-all ${
+                authMode === 'signup' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              Sign up
+              Sign Up
             </button>
           </div>
 
           {authError && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200/60 text-rose-700 text-xs flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
+            <div className="mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{authError}</span>
             </div>
           )}
 
           {authMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-teal-50 border border-teal-200/60 text-teal-800 text-xs flex items-center gap-2">
-              <Sparkles className="w-4 h-4 shrink-0 text-teal-600" />
+            <div className="mb-4 p-3 rounded-2xl bg-teal-50 border border-teal-100 text-teal-700 text-xs flex items-center gap-2">
+              <Sparkles className="w-4 h-4 shrink-0" />
               <span>{authMessage}</span>
             </div>
           )}
 
-          <form onSubmit={handleAuth} className="space-y-3.5">
-            <div>
-              <label className="text-[11px] font-medium text-slate-600 block mb-1">Email address</label>
-              <div className="relative flex items-center">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3" />
-                <input
-                  type="email"
-                  required
-                  value={authEmail}
-                  onChange={e => setAuthEmail(e.target.value)}
-                  placeholder="name@company.com"
-                  className="w-full bg-slate-50/50 border border-slate-200 focus:border-teal-500 focus:bg-white rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/10 transition-all"
-                />
-              </div>
+          <form onSubmit={handleAuth} className="space-y-4">
+            <div className="relative flex items-center">
+              <Mail className="w-4 h-4 text-slate-400 absolute left-4" />
+              <input
+                type="email"
+                required
+                value={authEmail}
+                onChange={e => setAuthEmail(e.target.value)}
+                placeholder="Email"
+                className="w-full bg-[#F2F2F7] focus:bg-white rounded-2xl pl-11 pr-4 py-3.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all border border-transparent focus:border-teal-500/30"
+              />
             </div>
 
-            <div>
-              <label className="text-[11px] font-medium text-slate-600 block mb-1">Password</label>
-              <div className="relative flex items-center">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3" />
-                <input
-                  type="password"
-                  required
-                  value={authPassword}
-                  onChange={e => setAuthPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-slate-50/50 border border-slate-200 focus:border-teal-500 focus:bg-white rounded-xl pl-9 pr-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/10 transition-all"
-                />
-              </div>
+            <div className="relative flex items-center">
+              <Lock className="w-4 h-4 text-slate-400 absolute left-4" />
+              <input
+                type="password"
+                required
+                value={authPassword}
+                onChange={e => setAuthPassword(e.target.value)}
+                placeholder="Password"
+                className="w-full bg-[#F2F2F7] focus:bg-white rounded-2xl pl-11 pr-4 py-3.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 transition-all border border-transparent focus:border-teal-500/30"
+              />
             </div>
 
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-medium rounded-xl text-xs transition-all shadow-sm flex items-center justify-center gap-2 mt-2"
+              className="w-full py-3.5 bg-teal-600 hover:bg-teal-700 active:scale-[0.98] disabled:opacity-50 text-white font-semibold rounded-2xl text-sm transition-all shadow-md shadow-teal-600/20 flex items-center justify-center gap-2 mt-2"
             >
-              {authLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>{authMode === 'login' ? 'Sign in' : 'Create account'}</span>
+              {authLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>{authMode === 'login' ? 'Continue' : 'Create Account'}</span>
             </button>
           </form>
         </div>
@@ -368,51 +364,50 @@ export default function AspriDashboard() {
   ] as const;
 
   return (
-    <div className="flex h-screen bg-slate-50/50 text-slate-800 font-sans antialiased overflow-hidden relative">
+    <div className="flex h-dvh bg-[#F2F2F7] text-slate-900 font-sans antialiased overflow-hidden relative">
       
-      {/* Mobile Sidebar Overlay Backdrop */}
+      {/* Mobile Drawer Overlay Backdrop */}
       {isSidebarOpen && (
         <div 
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-slate-900/20 backdrop-blur-xs z-30 lg:hidden"
+          className="fixed inset-0 bg-black/20 backdrop-blur-md z-40 md:hidden transition-opacity"
         />
       )}
 
-      {/* SIDEBAR (Drawer Mode on Mobile, Expandable/Collapsible on Desktop) */}
+      {/* SIDEBAR (Collapsible & Mobile Responsive Apple Style) */}
       <aside 
-        className={`fixed lg:relative inset-y-0 left-0 z-40 w-80 max-w-[85vw] border-r border-slate-200/80 bg-white flex flex-col justify-between shrink-0 transition-all duration-300 ease-in-out ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:hidden'
+        className={`fixed md:relative inset-y-0 left-0 z-50 w-80 max-w-[85vw] bg-white/90 backdrop-blur-2xl border-r border-slate-200/60 flex flex-col justify-between shrink-0 transition-transform duration-300 ease-out ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:hidden'
         }`}
       >
-        <div className="flex flex-col h-full min-h-0">
+        <div className="flex flex-col min-h-0 flex-1">
           
-          {/* User Account Bar */}
-          <div className="p-3 mx-3 mt-3 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-between">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-teal-600 flex items-center justify-center font-bold text-white text-xs shrink-0 shadow-xs">
+          {/* Sidebar Top Header */}
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-teal-600 to-teal-400 flex items-center justify-center font-bold text-white text-sm shadow-sm shrink-0">
                 {sessionUser.email.slice(0, 2).toUpperCase()}
               </div>
               <div className="truncate">
-                <p className="text-xs font-semibold text-slate-800 truncate">{sessionUser.email}</p>
+                <p className="text-sm font-semibold text-slate-900 truncate">{sessionUser.email}</p>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500" />
-                  <span className="text-[10px] text-slate-500 font-medium">Pro Workspace</span>
+                  <span className="text-[11px] text-slate-500 font-medium">Personal Space</span>
                 </div>
               </div>
             </div>
             <button 
               onClick={handleSignOut}
               title="Sign out"
-              className="text-slate-400 hover:text-slate-700 p-1.5 hover:bg-slate-200/50 rounded-lg transition-colors ml-1 shrink-0"
+              className="text-slate-400 hover:text-slate-700 p-2 hover:bg-slate-100 rounded-full transition-colors ml-1 shrink-0"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
 
           {/* Quick Filters */}
           <div className="px-3 pt-4 pb-2">
-            <p className="px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Filters</p>
-            <div className="grid grid-cols-2 gap-1">
+            <p className="px-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Views</p>
+            <div className="grid grid-cols-2 gap-1.5">
               {filterOptions.map(({ key, label, icon: Icon }) => {
                 const active = activeFilter === key;
                 return (
@@ -420,17 +415,17 @@ export default function AspriDashboard() {
                     key={key}
                     onClick={() => {
                       setActiveFilter(key);
-                      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                      if (typeof window !== 'undefined' && window.innerWidth < 768) {
                         setIsSidebarOpen(false);
                       }
                     }}
-                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                       active 
-                        ? 'bg-teal-50 text-teal-800 border border-teal-200/80 font-semibold shadow-2xs' 
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/60 border border-transparent'
+                        ? 'bg-teal-500/10 text-teal-700 font-semibold' 
+                        : 'text-slate-600 hover:bg-slate-100/70 border border-transparent'
                     }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${active ? 'text-teal-600' : 'text-slate-400'}`} />
+                    <Icon className={`w-4 h-4 ${active ? 'text-teal-600' : 'text-slate-400'}`} />
                     <span>{label}</span>
                   </button>
                 );
@@ -439,18 +434,18 @@ export default function AspriDashboard() {
           </div>
 
           {/* Scrollable Container */}
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-4 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-5 custom-scrollbar">
             
             {/* Task Section */}
             <div>
               <div className="flex items-center justify-between px-2 mb-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tasks</span>
-                <span className="text-[10px] text-slate-500 font-mono bg-slate-100 px-1.5 py-0.5 rounded">{todos.length}</span>
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Tasks</span>
+                <span className="text-[10px] text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded-full">{todos.length}</span>
               </div>
               <div className="space-y-1.5">
                 {todos.length === 0 ? (
-                  <div className="p-4 text-center rounded-xl border border-dashed border-slate-200 text-xs text-slate-400">
-                    Tidak ada tugas di kategori ini
+                  <div className="p-4 text-center rounded-2xl bg-slate-50/50 border border-slate-100 text-xs text-slate-400">
+                    No active tasks
                   </div>
                 ) : (
                   todos.map(todo => {
@@ -462,34 +457,34 @@ export default function AspriDashboard() {
                     return (
                       <div 
                         key={todo.id}
-                        className="group relative p-2.5 rounded-xl bg-white border border-slate-200/70 hover:border-teal-200 hover:shadow-xs transition-all"
+                        className="group relative p-3 rounded-2xl bg-white border border-slate-100 hover:shadow-sm transition-all"
                       >
                         <div className="flex items-start gap-2.5">
                           <button 
                             onClick={() => toggleTodo(todo)}
-                            className="mt-0.5 text-slate-300 hover:text-teal-600 transition-colors"
+                            className="mt-0.5 text-slate-300 hover:text-teal-500 transition-colors"
                           >
                             {todo.is_done ? (
-                              <CheckCircle2 className="w-4 h-4 text-teal-600" />
+                              <CheckCircle2 className="w-5 h-5 text-teal-500" />
                             ) : (
-                              <Circle className="w-4 h-4" />
+                              <Circle className="w-5 h-5" />
                             )}
                           </button>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-normal leading-relaxed ${todo.is_done ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                            <p className={`text-xs font-medium leading-relaxed ${todo.is_done ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                               {todo.task}
                             </p>
                             <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200/60 text-slate-600 font-medium">
+                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-slate-50 border border-slate-200/60 text-slate-600 font-medium">
                                 <span>{catEmoji}</span>
                                 <span className="capitalize">{category}</span>
                               </span>
-                              <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-medium">
+                              <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-slate-50 border border-slate-200/60 text-slate-600 font-medium">
                                 <span>{priorityEmoji}</span>
                               </span>
                               {todo.due_at && (
-                                <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 font-mono ml-auto">
-                                  <Clock className="w-2.5 h-2.5 text-slate-400" />
+                                <span className="inline-flex items-center gap-1 text-[10px] text-slate-500 font-medium ml-auto">
+                                  <Clock className="w-3 h-3 text-slate-400" />
                                   {humanizeDue(todo.due_at)}
                                 </span>
                               )}
@@ -506,38 +501,29 @@ export default function AspriDashboard() {
             {/* Notes Section */}
             <div>
               <div className="flex items-center justify-between px-2 mb-2">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  <FileText className="w-3 h-3 text-slate-400" />
+                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <FileText className="w-3.5 h-3.5" />
                   <span>Notes</span>
                 </div>
-                <span className="text-[10px] text-slate-500 font-mono bg-slate-100 px-1.5 py-0.5 rounded">{notes.length}</span>
+                <span className="text-[10px] text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded-full">{notes.length}</span>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2 pb-4">
                 {notes.length === 0 ? (
-                  <div className="p-4 text-center rounded-xl border border-dashed border-slate-200 text-xs text-slate-400">
-                    Belum ada catatan tercatat
+                  <div className="p-4 text-center rounded-2xl bg-slate-50/50 border border-slate-100 text-xs text-slate-400">
+                    No notes recorded
                   </div>
                 ) : (
                   notes.map(note => (
-                    <div key={note.id} className="p-3 rounded-xl bg-white border border-slate-200/70 hover:border-slate-300 transition-all text-xs text-slate-700 leading-relaxed group">
-                      <p className="line-clamp-4 text-xs font-normal text-slate-700 whitespace-pre-wrap">{note.content}</p>
-                      <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                    <div key={note.id} className="p-3.5 rounded-2xl bg-white border border-slate-100 transition-all text-xs text-slate-700 leading-relaxed group">
+                      <p className="line-clamp-4 font-mono text-[11px] text-slate-800 whitespace-pre-wrap">{note.content}</p>
+                      <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
                         <span>{new Date(note.created_at).toLocaleDateString()}</span>
                         <button 
-                          onClick={() => handleCopyNote(note.id, note.content)}
+                          onClick={() => navigator.clipboard.writeText(note.content)}
                           className="flex items-center gap-1 text-slate-400 hover:text-teal-600 transition-colors"
                         >
-                          {copiedNoteId === note.id ? (
-                            <>
-                              <Check className="w-3 h-3 text-teal-600" />
-                              <span className="text-teal-600 font-medium">Copied</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" />
-                              <span>Copy</span>
-                            </>
-                          )}
+                          <span>Copy</span>
+                          <ExternalLink className="w-3 h-3" />
                         </button>
                       </div>
                     </div>
@@ -551,100 +537,61 @@ export default function AspriDashboard() {
       </aside>
 
       {/* MAIN WORKSPACE PANEL */}
-      <main className="flex-1 flex flex-col h-full bg-slate-50/50 relative overflow-hidden">
+      <main className="flex-1 flex flex-col h-full relative">
 
-        {/* Top Header */}
-        <header className="h-14 border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between bg-white/90 backdrop-blur-md z-10">
+        {/* Clean iOS Style Header */}
+        <header className="h-14 px-4 sm:px-6 flex items-center justify-between bg-white/80 backdrop-blur-xl border-b border-slate-200/60 z-20 shrink-0">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200/70 text-slate-600 transition-colors border border-slate-200/60"
-              title={isSidebarOpen ? "Sembunyikan sidebar" : "Tampilkan sidebar"}
+              className="p-2 rounded-full bg-slate-100 hover:bg-slate-200/60 text-slate-700 transition-colors"
+              title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             >
               {isSidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
 
             <div className="flex items-center gap-2">
-              <div className="p-1 rounded-lg bg-teal-50 border border-teal-100 text-teal-600">
-                <Sparkles className="w-4 h-4" />
-              </div>
-              <div>
-                <h1 className="text-xs sm:text-sm font-semibold text-slate-900">To-Do Assistant</h1>
-                <p className="text-[10px] text-slate-400 hidden sm:block">AI Task & Note Assistant</p>
-              </div>
+              <div className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-pulse" />
+              <h1 className="text-sm font-semibold tracking-tight text-slate-900">Assistant</h1>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-mono text-slate-500">
-              v1.0 (Next.js)
-            </span>
           </div>
         </header>
 
-        {/* Suggestion Quick Commands */}
-        <div className="px-4 sm:px-6 py-2 border-b border-slate-200/60 bg-white/50 flex items-center gap-2 text-xs text-slate-600 overflow-x-auto z-10 no-scrollbar">
-          <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider flex items-center gap-0.5 shrink-0">
-            <span>Contoh</span>
-            <ChevronRight className="w-3 h-3 text-slate-400" />
-          </span>
-          <button 
-            onClick={() => handleSend("ingatkan saya untuk cek inbox review esok jam 10 pagi")}
-            className="px-3 py-1 rounded-lg bg-white border border-slate-200/80 hover:bg-slate-100/60 text-slate-700 text-xs transition-all whitespace-nowrap shadow-2xs shrink-0"
-          >
-            "ingatkan saya untuk cek inbox review esok jam 10 pagi"
-          </button>
-          <button 
-            onClick={() => handleSend("apa saja tugas yang due hari ini?")}
-            className="px-3 py-1 rounded-lg bg-white border border-slate-200/80 hover:bg-slate-100/60 text-slate-700 text-xs transition-all whitespace-nowrap shadow-2xs shrink-0"
-          >
-            "apa saja tugas yang due hari ini?"
-          </button>
-          <button 
-            onClick={() => handleSend("catat bahwa wifi password kantor x")}
-            className="px-3 py-1 rounded-lg bg-white border border-slate-200/80 hover:bg-slate-100/60 text-slate-700 text-xs transition-all whitespace-nowrap shadow-2xs shrink-0"
-          >
-            "catat bahwa wifi password kantor x"
-          </button>
-        </div>
-
-        {/* Alert Banners */}
+        {/* Alert Banners (Sticky Below Header) */}
         {(overdueTodos.length > 0 || todayTodos.length > 0) && (
-          <div className="px-4 sm:px-6 pt-3 space-y-2 z-10">
+          <div className="px-4 sm:px-6 pt-3 space-y-2 z-10 w-full max-w-3xl mx-auto shrink-0">
             {overdueTodos.length > 0 && (
-              <div className="px-3.5 py-2 rounded-xl bg-rose-50 border border-rose-200/70 text-rose-800 text-xs flex items-center gap-2 shadow-2xs">
+              <div className="px-4 py-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-800 text-xs flex items-center gap-2 backdrop-blur-md">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
-                <span>⏰ <strong>{overdueTodos.length} overdue:</strong> {overdueTodos.slice(0, 3).map(t => t.task).join(', ')}{overdueTodos.length > 3 ? '...' : ''}</span>
+                <span><strong>{overdueTodos.length} overdue:</strong> {overdueTodos.slice(0, 2).map(t => t.task).join(', ')}</span>
               </div>
             )}
             {todayTodos.length > 0 && (
-              <div className="px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-200/70 text-amber-800 text-xs flex items-center gap-2 shadow-2xs">
+              <div className="px-4 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 text-xs flex items-center gap-2 backdrop-blur-md">
                 <Clock className="w-4 h-4 shrink-0 text-amber-500" />
-                <span>📅 <strong>Due hari ini:</strong> {todayTodos.slice(0, 3).map(t => t.task).join(', ')}{todayTodos.length > 3 ? '...' : ''}</span>
+                <span><strong>Due today:</strong> {todayTodos.slice(0, 2).map(t => t.task).join(', ')}</span>
               </div>
             )}
           </div>
         )}
 
-        {/* Chat Feed */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-4 z-10 custom-scrollbar">
+        {/* Chat Feed (Scrollable Region) */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5 w-full max-w-3xl mx-auto custom-scrollbar">
           {messages.map((msg, i) => (
             <div 
               key={i} 
-              className={`flex items-start gap-2.5 sm:gap-3 max-w-2xl ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
+              className={`flex items-start gap-2.5 sm:gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold ${
-                msg.role === 'user' 
-                  ? 'bg-slate-800 text-white' 
-                  : 'bg-teal-50 border border-teal-200/70 text-teal-700'
-              }`}>
-                {msg.role === 'user' ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
-              </div>
+              {msg.role === 'assistant' && (
+                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-white border border-slate-200/60 text-slate-600 shadow-sm">
+                  <Bot className="w-4 h-4" />
+                </div>
+              )}
 
-              <div className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
+              <div className={`max-w-[82%] sm:max-w-[75%] p-3.5 sm:p-4 rounded-[20px] text-sm leading-relaxed shadow-sm ${
                 msg.role === 'user' 
-                  ? 'bg-teal-600 text-white rounded-tr-none shadow-xs' 
-                  : 'bg-white border border-slate-200/80 text-slate-800 rounded-tl-none shadow-xs'
+                  ? 'bg-teal-600 text-white rounded-br-sm' 
+                  : 'bg-white border border-slate-200/60 text-slate-800 rounded-bl-sm'
               }`}>
                 {msg.content}
               </div>
@@ -652,39 +599,68 @@ export default function AspriDashboard() {
           ))}
 
           {isSending && (
-            <div className="flex items-start gap-2.5 sm:gap-3 max-w-2xl">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold bg-teal-50 border border-teal-200/70 text-teal-700">
-                <Bot className="w-3.5 h-3.5" />
+            <div className="flex items-start gap-2.5 sm:gap-3 justify-start">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-white border border-slate-200/60 text-slate-600 shadow-sm">
+                <Bot className="w-4 h-4" />
               </div>
-              <div className="p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed bg-white border border-slate-200/80 text-slate-500 rounded-tl-none shadow-xs flex items-center gap-2">
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-teal-600" />
-                <span>Memproses instruksi...</span>
+              <div className="p-3.5 sm:p-4 rounded-[20px] text-sm leading-relaxed bg-white border border-slate-200/60 text-slate-500 rounded-bl-sm shadow-sm flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
+                <span>Thinking...</span>
               </div>
             </div>
           )}
+          
+          {/* Invisible element to auto-scroll to */}
+          <div ref={chatEndRef} className="h-2" />
         </div>
 
-        {/* Command Bar */}
-        <div className="p-3 sm:p-4 z-10 bg-white/70 backdrop-blur-md border-t border-slate-200/80">
-          <form 
-            onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-            className="max-w-2xl mx-auto relative flex items-center"
-          >
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Tulis tugas atau catatan baru..."
-              className="w-full bg-white border border-slate-200 focus:border-teal-500 rounded-2xl pl-4 pr-12 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/10 shadow-xs transition-all"
-            />
-            <button
-              type="submit"
-              disabled={isSending || !input.trim()}
-              className="absolute right-1.5 p-2 bg-teal-600 hover:bg-teal-700 disabled:opacity-30 disabled:hover:bg-teal-600 text-white font-medium rounded-xl transition-all shadow-xs"
+        {/* Bottom Stickied Input Area (Always Visible) */}
+        <div className="bg-[#F2F2F7]/90 backdrop-blur-xl border-t border-slate-200/60 p-3 sm:p-4 z-20 shrink-0 pb-safe">
+          <div className="max-w-3xl mx-auto w-full space-y-3">
+            
+            {/* iOS Style Horizontal Scroll Chips */}
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 text-xs">
+              <button 
+                onClick={() => handleSend("Remind me to check my inbox about performance review tomorrow at 10am")}
+                className="px-4 py-1.5 rounded-full bg-white border border-slate-200/60 hover:bg-slate-50 active:scale-95 text-slate-700 transition-all whitespace-nowrap shadow-sm"
+              >
+                Remind check inbox
+              </button>
+              <button 
+                onClick={() => handleSend("What's due today?")}
+                className="px-4 py-1.5 rounded-full bg-white border border-slate-200/60 hover:bg-slate-50 active:scale-95 text-slate-700 transition-all whitespace-nowrap shadow-sm"
+              >
+                What's due today?
+              </button>
+              <button 
+                onClick={() => handleSend("Note that the wifi password is x")}
+                className="px-4 py-1.5 rounded-full bg-white border border-slate-200/60 hover:bg-slate-50 active:scale-95 text-slate-700 transition-all whitespace-nowrap shadow-sm"
+              >
+                Note wifi password
+              </button>
+            </div>
+
+            {/* Apple Input Pill */}
+            <form 
+              onSubmit={(e) => { e.preventDefault(); handleSend(); }}
+              className="relative flex items-center"
             >
-              <Send className="w-3.5 h-3.5" />
-            </button>
-          </form>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Tell me what to do..."
+                className="w-full bg-white border border-slate-300 focus:border-teal-500 rounded-full pl-5 pr-14 py-3 sm:py-3.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-teal-500/10 shadow-sm transition-all"
+              />
+              <button
+                type="submit"
+                disabled={isSending || !input.trim()}
+                className="absolute right-2 p-2 bg-teal-600 hover:bg-teal-700 active:scale-90 disabled:opacity-30 disabled:hover:bg-teal-600 text-white font-bold rounded-full transition-all shadow-md"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </form>
+          </div>
         </div>
 
       </main>
