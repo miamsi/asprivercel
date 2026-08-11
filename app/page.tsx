@@ -578,59 +578,6 @@ export default function AspriDashboard() {
       </aside>
 
       <main className="flex-1 flex flex-col h-full bg-[#FAF7FF] relative overflow-hidden">
-        <header className="h-14 border-b-2 border-[#170F26] px-4 sm:px-6 flex items-center justify-between bg-white/90 backdrop-blur-md z-10">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="p-1.5 rounded-lg bg-[#FAF7FF] hover:bg-violet-100 text-[#6D28D9] transition-colors border-2 border-[#170F26]"
-              title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-            >
-              {isSidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-            </button>
-
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#6D28D9] flex items-center justify-center text-white rotate-[-3deg]">
-                <span style={{ fontFamily: FONT_DISPLAY }} className="text-xs font-bold">A</span>
-              </div>
-              <div>
-                <h1 style={{ fontFamily: FONT_DISPLAY }} className="text-xs sm:text-sm font-bold text-[#170F26]">Aspri</h1>
-                <p className="text-[10px] text-zinc-400 hidden sm:block">Groq Orchestrator • Low-Latency Response</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span style={{ fontFamily: FONT_MONO }} className="px-2 py-0.5 rounded-full bg-[#170F26] text-[10px] text-white font-semibold">
-              v1.0
-            </span>
-          </div>
-        </header>
-
-        <div className="px-4 sm:px-6 py-2 border-b border-zinc-200 bg-white flex items-center gap-2 text-xs text-zinc-600 overflow-x-auto z-10 no-scrollbar">
-          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1 shrink-0">
-            <span>Try</span>
-            <ChevronRight className="w-3 h-3" />
-          </span>
-          <button
-            onClick={() => handleSend("remind me to check my inbox about performance review tomorrow at 10am")}
-            className="px-3 py-1 rounded-lg bg-white border-2 border-zinc-200 hover:border-[#6D28D9] hover:text-[#6D28D9] text-zinc-700 text-xs font-medium transition-all whitespace-nowrap shrink-0"
-          >
-            "remind me to check my inbox about performance review tomorrow at 10am"
-          </button>
-          <button
-            onClick={() => handleSend("what's due today?")}
-            className="px-3 py-1 rounded-lg bg-white border-2 border-zinc-200 hover:border-[#6D28D9] hover:text-[#6D28D9] text-zinc-700 text-xs font-medium transition-all whitespace-nowrap shrink-0"
-          >
-            "what's due today?"
-          </button>
-          <button
-            onClick={() => handleSend("note that the wifi password is x")}
-            className="px-3 py-1 rounded-lg bg-white border-2 border-zinc-200 hover:border-[#6D28D9] hover:text-[#6D28D9] text-zinc-700 text-xs font-medium transition-all whitespace-nowrap shrink-0"
-          >
-            "note that the wifi password is x"
-          </button>
-        </div>
-
         {(overdueTodos.length > 0 || todayTodos.length > 0) && (
           <div className="px-4 sm:px-6 pt-3 space-y-2 z-10">
             {overdueTodos.length > 0 && (
