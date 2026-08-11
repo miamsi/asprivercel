@@ -173,9 +173,10 @@ const TOOLS: Connector['tools'] = [
 
 function fmt(t: any) {
   return {
+    id: t.id,
     task: t.task,
-    is_done: t.is_done,
-    due: humanizeDue(t.due_at),
+    status: t.is_done ? 'completed' : 'active',
+    due: humanizeDue(t.due_at) || 'no due date',
     category: t.category || 'other',
     priority: t.priority || 'medium',
   };
