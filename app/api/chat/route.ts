@@ -29,12 +29,17 @@ Which modules are needed to fulfill this? Respond ONLY with a JSON array of name
       temperature: 0.0,
     });
     const content = res.choices[0]?.message?.content?.trim() || '[]';
-    const names = JSON.parse(content);
-    if (Array.isArray(names)) {
-      return names.filter(n => ALL_CONNECTORS[n]);
+    
+    // Strip markdown formatting if the model wraps JSON in ```json ... ```
+    const cleanContent = content.replace(/```json|```/gi, '').trim();
+    const names = JSON.parse(cleanContent);
+    
+    if (Array.isArray(names) && names.length > 0) {
+      const filtered = names.filter(n => ALL_CONNECTORS[n]);
+      if (filtered.length > 0) return filtered;
     }
   } catch {
-    // Fallback to all connectors
+    // Fallback to all connectors on parse failure
   }
   return Object.keys(ALL_CONNECTORS);
 }
@@ -52,6 +57,11 @@ export async function POST(req: Request) {
       content: `Current time: ${nowLabel()}
 
 You are a helpful to-do and notes assistant.
+
+CRITICAL INSTRUCTIONS:
+- You do not know the user's tasks or notes in memory.
+- Whenever the user asks to see, check, list, or retrieve tasks or notes (e.g., "bring me my tasks", "what is due today"), you MUST call the appropriate retrieval tool before formulating your answer.
+- NEVER claim that the task or note list is empty without querying the database via a tool first.
 
 ${domainPrompts}`,
     };
@@ -83,11 +93,15 @@ ${domainPrompts}`,
           currentMessages.push(responseMessage as any);
 
           if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
-            dbChanged = true;
             for (const toolCall of responseMessage.tool_calls) {
               const name = toolCall.function.name;
               const args = JSON.parse(toolCall.function.arguments || '{}');
               const conn = getConnectorForTool(name);
+
+              // Only flag dbChanged for mutation operations, not read operations
+              if (!name.startsWith('get') && !name.startsWith('fetch') && !name.startsWith('list') && !name.startsWith('search')) {
+                dbChanged = true;
+              }
 
               let result: Record<string, any>;
               if (conn) {
@@ -110,7 +124,6 @@ ${domainPrompts}`,
 
         if (finalReply) break;
       } catch (err: any) {
-        // Catch 404 (invalid model), 429 (rate limit), and other SDK errors, mark the model in Supabase, and continue to the next model
         const cooldown = err?.status === 404 ? 3600 : 60;
         await markRateLimited(model, cooldown);
         continue;
