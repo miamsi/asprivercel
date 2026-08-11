@@ -22,6 +22,7 @@ import {
   Mail,
   Loader2,
   Menu,
+  X,
   Pin,
 } from 'lucide-react';
 import { humanizeDue } from '@/lib/time_utils';
@@ -437,13 +438,22 @@ export default function AspriDashboard() {
                 </div>
               </div>
             </div>
-            <button
-              onClick={handleSignOut}
-              title="Sign out"
-              className="text-[#170F26] hover:text-[#FB4D67] p-1.5 hover:bg-rose-50 rounded-lg transition-colors ml-1 shrink-0"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex items-center gap-1 shrink-0 ml-1">
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                title="Hide sidebar"
+                className="text-[#170F26] hover:text-[#6D28D9] p-1.5 hover:bg-violet-100 rounded-lg transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={handleSignOut}
+                title="Sign out"
+                className="text-[#170F26] hover:text-[#FB4D67] p-1.5 hover:bg-rose-50 rounded-lg transition-colors"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           <div className="px-3 pt-4 pb-2">
