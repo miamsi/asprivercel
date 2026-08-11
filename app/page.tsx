@@ -420,8 +420,8 @@ export default function AspriDashboard() {
       )}
 
       <aside
-        className={`fixed md:relative inset-y-0 left-0 z-40 w-80 max-w-[85vw] border-r-2 border-[#170F26] bg-white flex flex-col justify-between shrink-0 transition-transform duration-300 ease-in-out ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:hidden'
+        className={`fixed md:relative inset-y-0 left-0 z-40 w-80 max-w-[85vw] border-r-2 border-[#170F26] bg-white flex flex-col justify-between shrink-0 transition-all duration-300 ease-in-out ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:hidden hidden'
         }`}
       >
         <div className="flex flex-col min-h-0 flex-1">
@@ -440,18 +440,20 @@ export default function AspriDashboard() {
             </div>
             <div className="flex items-center gap-1 shrink-0 ml-1">
               <button
+                type="button"
                 onClick={() => setIsSidebarOpen(false)}
                 title="Hide sidebar"
                 className="text-[#170F26] hover:text-[#6D28D9] p-1.5 hover:bg-violet-100 rounded-lg transition-colors"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" />
               </button>
               <button
+                type="button"
                 onClick={handleSignOut}
                 title="Sign out"
                 className="text-[#170F26] hover:text-[#FB4D67] p-1.5 hover:bg-rose-50 rounded-lg transition-colors"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -586,15 +588,17 @@ export default function AspriDashboard() {
       </aside>
 
       <main className="flex-1 flex flex-col h-full bg-[#FAF7FF] relative overflow-hidden">
-        {!isSidebarOpen && (
+        <div className="p-3 sm:p-4 pb-0 z-20 flex items-center">
           <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="absolute top-3 left-3 z-20 p-2 rounded-xl bg-white border-2 border-[#170F26] shadow-[2px_2px_0_0_#170F26] hover:bg-violet-50 transition-all"
-            title="Open sidebar"
+            type="button"
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 rounded-xl bg-white border-2 border-[#170F26] shadow-[2px_2px_0_0_#170F26] hover:bg-violet-50 transition-all flex items-center gap-1.5 text-xs font-bold text-[#170F26]"
+            title={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
           >
             <Menu className="w-4 h-4 text-[#170F26]" />
+            <span className="hidden sm:inline">{isSidebarOpen ? 'Hide Sidebar' : 'Show Sidebar'}</span>
           </button>
-        )}
+        </div>
 
         {(overdueTodos.length > 0 || todayTodos.length > 0) && (
           <div className="px-4 sm:px-6 pt-3 space-y-2 z-10">
