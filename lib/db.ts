@@ -75,8 +75,28 @@ export async function listTodos(userId: string, filterType: string = 'open'): Pr
 
 export async function findMatchingTodos(userId: string, queryText: string, status: 'open' | 'done' = 'open'): Promise<TodoRow[]> {
   const todos = await listTodos(userId, status === 'open' ? 'open' : 'done');
-  const term = queryText.toLowerCase().trim();
-  return todos.filter(t => t.task.toLowerCase().includes(term));
+  const cleanQuery = queryText.toLowerCase().replace(/[^\w\s]/g, '').trim();
+  
+  if (!cleanQuery) return [];
+
+  // Direct substring matching
+  const exactOrSubstring = todos.filter(t => {
+    const cleanTask = t.task.toLowerCase().replace(/[^\w\s]/g, '').trim();
+    return cleanTask.includes(cleanQuery) || cleanQuery.includes(cleanTask);
+  });
+
+  if (exactOrSubstring.length > 0) return exactOrSubstring;
+
+  // Word overlap fallback
+  const queryWords = cleanQuery.split(/\s+/).filter(w => w.length > 1);
+  if (queryWords.length > 0) {
+    return todos.filter(t => {
+      const cleanTask = t.task.toLowerCase();
+      return queryWords.some(word => cleanTask.includes(word));
+    });
+  }
+
+  return [];
 }
 
 export async function completeTodo(id: string): Promise<void> {
