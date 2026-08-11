@@ -170,9 +170,6 @@ GENERAL RULES:
 
 ${domainPrompts}`;
 
-GENERAL RULES:
-- Keep your final spoken replies short, warm, and conversational. Use at most one emoji.`;
-
     const messages: any[] = [
       { role: 'system', content: systemPrompt },
       ...(history || []),
