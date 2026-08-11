@@ -134,11 +134,13 @@ async function executeRecoveredTool(
     ? await conn.handle(recovered.name, recovered.args, userId)
     : { status: 'error', message: `No connector handles ${recovered.name}` };
 
-  const changed = !READ_ONLY_TOOLS.has(recovered.name);
+  // FIX: Only trigger UI refresh if the tool actually succeeded in mutating data
+  const changed = !READ_ONLY_TOOLS.has(recovered.name) && result.status === 'ok';
 
   messages.push({
     role: 'system',
-    content: `[internal only — do not repeat this to the user] You just performed the action '${recovered.name}' with parameters ${JSON.stringify(recovered.args)}. Result: ${JSON.stringify(result)}. Now reply to the user naturally and briefly, as if you simply did the thing. Never mention tool or function names, parameters, or the word 'calling'.`,
+    // FIX: Instruct the AI to respect the tool's status instead of blindly saying it worked.
+    content: `[internal only — do not repeat this to the user] You just performed the action '${recovered.name}' with parameters ${JSON.stringify(recovered.args)}. Result: ${JSON.stringify(result)}. If status is 'ok', confirm briefly. If status is 'not_found', 'ambiguous', or 'error', accurately tell the user that the task could not be found or updated. Do NOT pretend it succeeded. Never mention tool or function names.`,
   });
 
   const finalReply = await plainComplete(candidateModels, messages);
@@ -167,6 +169,7 @@ CRITICAL RULES FOR TASKS:
 
 GENERAL RULES:
 - Keep your final spoken replies short, warm, and conversational. Use at most one emoji.
+- CRITICAL: If a tool returns status "not_found", "error", or "ambiguous", you MUST tell the user the action failed or needs clarification. NEVER pretend a task was updated or completed if the tool failed.
 
 ${domainPrompts}`;
 
@@ -223,14 +226,15 @@ ${domainPrompts}`;
             args = {};
           }
 
-          if (!READ_ONLY_TOOLS.has(toolName)) {
-            dbChanged = true;
-          }
-
           const conn = getConnectorForTool(toolName);
           const result = conn
             ? await conn.handle(toolName, args, userId)
             : { status: 'error', message: `no connector handles tool '${toolName}'` };
+
+          // FIX: Only trigger UI refresh if the mutation was actually successful
+          if (!READ_ONLY_TOOLS.has(toolName) && result.status === 'ok') {
+            dbChanged = true;
+          }
 
           messages.push({
             role: 'tool',
