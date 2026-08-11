@@ -17,13 +17,11 @@ import {
   Bot,
   User,
   ExternalLink,
-  ChevronRight,
   AlertTriangle,
   Lock,
   Mail,
   Loader2,
   Menu,
-  X,
   Pin,
 } from 'lucide-react';
 import { humanizeDue } from '@/lib/time_utils';
@@ -501,7 +499,7 @@ export default function AspriDashboard() {
                         key={todo.id}
                         className={`group relative p-2.5 pl-3 rounded-xl bg-white border-2 border-zinc-200 hover:border-[#170F26] hover:shadow-[2px_2px_0_0_#170F26] hover:-translate-y-0.5 transition-all border-l-4 ${cs.border}`}
                       >
-                        <Pin className={`w-3 h-3 absolute -top-1.5 -left-1.5 ${cs.text} rotate-[-30deg] opacity-70`} />
+                        <Pin className={`w-3 h-3 absolute -top-1.5 -left-1.5 ${cs.text} rotate-[-3deg] opacity-70`} />
                         <div className="flex items-start gap-2.5">
                           <button
                             onClick={() => toggleTodo(todo)}
@@ -578,6 +576,16 @@ export default function AspriDashboard() {
       </aside>
 
       <main className="flex-1 flex flex-col h-full bg-[#FAF7FF] relative overflow-hidden">
+        {!isSidebarOpen && (
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="absolute top-3 left-3 z-20 p-2 rounded-xl bg-white border-2 border-[#170F26] shadow-[2px_2px_0_0_#170F26] hover:bg-violet-50 transition-all"
+            title="Open sidebar"
+          >
+            <Menu className="w-4 h-4 text-[#170F26]" />
+          </button>
+        )}
+
         {(overdueTodos.length > 0 || todayTodos.length > 0) && (
           <div className="px-4 sm:px-6 pt-3 space-y-2 z-10">
             {overdueTodos.length > 0 && (
