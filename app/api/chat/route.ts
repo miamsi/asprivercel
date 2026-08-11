@@ -110,11 +110,10 @@ ${domainPrompts}`,
 
         if (finalReply) break;
       } catch (err: any) {
-        if (err?.status === 429) {
-          await markRateLimited(model, 60);
-          continue; // Failover to next candidate model in array
-        }
-        throw err;
+        // Catch 404 (invalid model), 429 (rate limit), and other SDK errors, mark the model in Supabase, and continue to the next model
+        const cooldown = err?.status === 404 ? 3600 : 60;
+        await markRateLimited(model, cooldown);
+        continue;
       }
     }
 
