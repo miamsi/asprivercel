@@ -51,13 +51,31 @@ Respond with ONLY a JSON array, e.g. ["todos"].`;
   return Object.keys(ALL_CONNECTORS);
 }
 
-// --- Malformed tool call salvage (Groq Llama quirk) ------------------------
+// --- Tool Error Salvage Helpers --------------------------------------------
+function extractFailedGeneration(err: any): string | null {
+  if (err?.error?.error?.failed_generation) return err.error.error.failed_generation;
+  if (err?.error?.failed_generation) return err.error.failed_generation;
+  if (err?.failed_generation) return err.failed_generation;
+  
+  const str = err?.message || err?.toString() || '';
+  const match = str.match(/'failed_generation':\s*'(.*?)'/s) || str.match(/"failed_generation":\s*"(.*?)"/s);
+  if (match) return match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+  return null;
+}
+
 function recoverMalformedToolCall(text: string): { name: string; args: Record<string, any> } | null {
-  const match = text.match(/<function=(\w+)>?\s*(\{.*)/s);
+  // Matches <function=name> anywhere, followed by the JSON args payload
+  const match = text.match(/<function=(\w+)>?[^{]*(\{.*)/s);
   if (!match) return null;
 
   const name = match[1];
-  const rawArgs = match[2].replace(/<\/function>.*$/s, '').trim();
+  let rawArgs = match[2];
+
+  // Strip the trailing tag if present
+  const closeIdx = rawArgs.lastIndexOf('</function>');
+  if (closeIdx !== -1) {
+    rawArgs = rawArgs.slice(0, closeIdx).trim();
+  }
 
   let depth = 0;
   let end = -1;
@@ -75,9 +93,11 @@ function recoverMalformedToolCall(text: string): { name: string; args: Record<st
   if (end === -1) return null;
 
   try {
-    const args = JSON.parse(rawArgs.slice(0, end));
+    // Groq sometimes outputs literal newlines inside strings. We must sanitize them.
+    const cleanStr = rawArgs.slice(0, end).replace(/\n/g, '\\n');
+    const args = JSON.parse(cleanStr);
     return { name, args };
-  } catch {
+  } catch (e) {
     return null;
   }
 }
@@ -102,6 +122,29 @@ async function plainComplete(candidateModels: string[], messages: any[]): Promis
   return '';
 }
 
+// --- Reusable Salvaged Tool Execution --------------------------------------
+async function executeRecoveredTool(
+  recovered: { name: string; args: Record<string, any> },
+  userId: string,
+  candidateModels: string[],
+  messages: any[]
+) {
+  const conn = getConnectorForTool(recovered.name);
+  const result = conn
+    ? await conn.handle(recovered.name, recovered.args, userId)
+    : { status: 'error', message: `No connector handles ${recovered.name}` };
+
+  const changed = !READ_ONLY_TOOLS.has(recovered.name);
+
+  messages.push({
+    role: 'system',
+    content: `[internal only — do not repeat this to the user] You just performed the action '${recovered.name}' with parameters ${JSON.stringify(recovered.args)}. Result: ${JSON.stringify(result)}. Now reply to the user naturally and briefly, as if you simply did the thing. Never mention tool or function names, parameters, or the word 'calling'.`,
+  });
+
+  const finalReply = await plainComplete(candidateModels, messages);
+  return { reply: finalReply || 'Done!', changed };
+}
+
 // --- Main API handler -----------------------------------------------------
 export async function POST(req: Request) {
   try {
@@ -117,6 +160,11 @@ Right now it is: ${nowLabel()}.
 
 You have access to the following capabilities right now: ${activeConnectors.join(', ')}.
 Always use a tool when the user wants to add, list, complete, reschedule, delete, or search something that fits one of your capabilities. Only reply with plain text (no tool call) for greetings, small talk, or clarifying questions.
+
+CRITICAL INSTRUCTIONS:
+- You do not know the user's tasks or notes in memory.
+- Whenever the user asks to see, check, list, or retrieve tasks or notes (e.g., "bring me my tasks"), you MUST call the appropriate retrieval tool before formulating your answer.
+- NEVER claim that the task or note list is empty without querying the database via a tool first.
 
 ${domainPrompts}
 
@@ -147,29 +195,16 @@ GENERAL RULES:
 
         const content = responseMessage.content || '';
 
-        // Check for Groq's malformed tool call text
+        // Handle text-embedded malformed tool calls (200 OK edge case)
         if (!responseMessage.tool_calls || responseMessage.tool_calls.length === 0) {
           if (content.includes('<function=')) {
             const recovered = recoverMalformedToolCall(content);
             if (recovered) {
-              const conn = getConnectorForTool(recovered.name);
-              const result = conn
-                ? await conn.handle(recovered.name, recovered.args, userId)
-                : { status: 'error', message: `No connector handles ${recovered.name}` };
-
-              if (!READ_ONLY_TOOLS.has(recovered.name)) dbChanged = true;
-
-              messages.push({
-                role: 'system',
-                content: `[internal only — do not repeat this to the user] You just performed the action '${recovered.name}' with parameters ${JSON.stringify(recovered.args)}. Result: ${JSON.stringify(result)}. Now reply to the user naturally and briefly, as if you simply did the thing. Never mention tool or function names, parameters, or the word 'calling'.`,
-              });
-
-              const finalReply = await plainComplete(candidateModels, messages);
-              return NextResponse.json({ reply: finalReply || 'Done!', changed: dbChanged });
+              const res = await executeRecoveredTool(recovered, userId, candidateModels, messages);
+              return NextResponse.json(res);
             }
           }
-
-          // Plain text response (no tool needed)
+          // True plain text response
           return NextResponse.json({ reply: content || '...', changed: false });
         }
 
@@ -205,13 +240,23 @@ GENERAL RULES:
           });
         }
 
-        // Generate final human-readable response summarizing tool outputs
         const finalReply = await plainComplete(candidateModels, messages);
         return NextResponse.json({
           reply: finalReply || 'Done — check your task list in the sidebar!',
           changed: dbChanged,
         });
       } catch (err: any) {
+        // --- 400 BAD REQUEST SALVAGE LOGIC ---
+        // Groq intercepts the malformed tag and throws a 400 error instead of 200 OK.
+        const failedGen = extractFailedGeneration(err);
+        if (failedGen) {
+          const recovered = recoverMalformedToolCall(failedGen);
+          if (recovered) {
+            const res = await executeRecoveredTool(recovered, userId, candidateModels, messages);
+            return NextResponse.json(res);
+          }
+        }
+
         const cooldown = err?.status === 404 ? 3600 : 60;
         await markRateLimited(model, cooldown);
         continue;
