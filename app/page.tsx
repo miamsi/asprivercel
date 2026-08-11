@@ -2,35 +2,77 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { 
-  CheckCircle2, 
-  Circle, 
-  FileText, 
-  LogOut, 
-  Send, 
-  Calendar, 
-  AlertCircle, 
-  Clock, 
-  CheckCheck, 
+import {
+  CheckCircle2,
+  Circle,
+  FileText,
+  LogOut,
+  Send,
+  Calendar,
+  AlertCircle,
+  Clock,
+  CheckCheck,
   ListFilter,
   Sparkles,
   Bot,
   User,
   ExternalLink,
   ChevronRight,
-  Tag,
   AlertTriangle,
   Lock,
   Mail,
-  Loader2
+  Loader2,
+  Menu,
+  X,
+  Pin,
 } from 'lucide-react';
 import { humanizeDue } from '@/lib/time_utils';
 import { CATEGORY_EMOJI, PRIORITY_EMOJI } from '@/lib/connectors/todos';
 
+// --- Supabase client -------------------------------------------------------
+// Guarded so a missing env var fails loudly at runtime instead of crashing
+// the entire Next.js build during static prerendering.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  // eslint-disable-next-line no-console
+  console.warn('Supabase env vars are missing — auth/data features will not work.');
+}
+
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-anon-key'
 );
+
+// --- Design tokens -----------------------------------------------------
+// canvas #FAF7FF · ink #170F26 · violet #6D28D9 · rose #FB4D67
+// amber #FFC53D · emerald #16C172 · sky #2F8FFF
+const FONT_DISPLAY = "'Space Grotesk', ui-sans-serif, system-ui, sans-serif";
+const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace";
+
+const CATEGORY_PALETTE = [
+  { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700', dot: 'bg-violet-500' },
+  { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', dot: 'bg-rose-500' },
+  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', dot: 'bg-amber-500' },
+  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  { bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-700', dot: 'bg-sky-500' },
+] as const;
+
+function categoryStyle(category: string) {
+  let hash = 0;
+  for (let i = 0; i < category.length; i++) hash = (hash * 31 + category.charCodeAt(i)) >>> 0;
+  return CATEGORY_PALETTE[hash % CATEGORY_PALETTE.length];
+}
+
+const FILTER_STYLES: Record<string, { active: string; ring: string; icon: string }> = {
+  open: { active: 'bg-[#6D28D9] text-white', ring: 'ring-violet-200', icon: 'text-violet-500' },
+  today: { active: 'bg-[#FFC53D] text-[#170F26]', ring: 'ring-amber-200', icon: 'text-amber-500' },
+  overdue: { active: 'bg-[#FB4D67] text-white', ring: 'ring-rose-200', icon: 'text-rose-500' },
+  upcoming: { active: 'bg-[#2F8FFF] text-white', ring: 'ring-sky-200', icon: 'text-sky-500' },
+  done: { active: 'bg-[#16C172] text-white', ring: 'ring-emerald-200', icon: 'text-emerald-500' },
+  all: { active: 'bg-[#170F26] text-white', ring: 'ring-zinc-300', icon: 'text-zinc-500' },
+};
 
 interface Todo {
   id: string;
@@ -63,6 +105,7 @@ export default function AspriDashboard() {
   const [authMessage, setAuthMessage] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'open' | 'today' | 'overdue' | 'upcoming' | 'done' | 'all'>('open');
   const [todos, setTodos] = useState<Todo[]>([]);
   const [overdueTodos, setOverdueTodos] = useState<Todo[]>([]);
@@ -70,10 +113,16 @@ export default function AspriDashboard() {
   const [notes, setNotes] = useState<Note[]>([]);
 
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: "Hi! How can I help you manage your tasks and notes today?" }
+    { role: 'assistant', content: "Hi! How can I help you manage your tasks and notes today?" },
   ]);
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setIsSidebarOpen(false);
+    }
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -105,7 +154,7 @@ export default function AspriDashboard() {
     } else if (filterType === 'done') {
       query = query.eq('is_done', true);
     } else if (filterType === 'today') {
-      query = query.eq('is_done', false).lte('due_at', todayEnd.toISOString()).gte('due_at', new Date(new Date().setHours(0,0,0,0)).toISOString());
+      query = query.eq('is_done', false).lte('due_at', todayEnd.toISOString()).gte('due_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString());
     } else if (filterType === 'overdue') {
       query = query.eq('is_done', false).lt('due_at', now);
     } else if (filterType === 'upcoming') {
@@ -134,7 +183,7 @@ export default function AspriDashboard() {
       .eq('user_id', userId)
       .eq('is_done', false)
       .lte('due_at', todayEnd.toISOString())
-      .gte('due_at', new Date(new Date().setHours(0,0,0,0)).toISOString());
+      .gte('due_at', new Date(new Date().setHours(0, 0, 0, 0)).toISOString());
 
     setOverdueTodos((overdue || []) as Todo[]);
     setTodayTodos((today || []) as Todo[]);
@@ -154,7 +203,7 @@ export default function AspriDashboard() {
     await Promise.all([
       fetchTodos(userId, activeFilter),
       fetchBanners(userId),
-      fetchNotes(userId)
+      fetchNotes(userId),
     ]);
   }, [fetchTodos, fetchBanners, fetchNotes, activeFilter]);
 
@@ -227,10 +276,10 @@ export default function AspriDashboard() {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: query, 
-          history, 
-          userId: sessionUser.id 
+        body: JSON.stringify({
+          message: query,
+          history,
+          userId: sessionUser.id,
         }),
       });
 
@@ -247,31 +296,41 @@ export default function AspriDashboard() {
     }
   };
 
+  const FontImport = () => (
+    <style jsx global>{`
+      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap');
+    `}</style>
+  );
+
+  // --- Auth screen -----------------------------------------------------
   if (!sessionUser) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4 font-sans antialiased">
-        <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/60 p-8 shadow-2xl backdrop-blur-xl">
+      <div className="flex min-h-screen items-center justify-center bg-[#FAF7FF] p-4 font-sans antialiased text-[#170F26]">
+        <FontImport />
+        <div className="w-full max-w-md rounded-3xl border-2 border-[#170F26] bg-white p-6 sm:p-8 shadow-[6px_6px_0_0_#170F26]">
           <div className="text-center mb-6">
-            <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 mb-3">
-              <Sparkles className="w-6 h-6" />
+            <div className="inline-flex w-14 h-14 items-center justify-center rounded-2xl bg-[#6D28D9] text-white mb-3 rotate-[-3deg] shadow-[3px_3px_0_0_#170F26]">
+              <span style={{ fontFamily: FONT_DISPLAY }} className="text-2xl font-bold">A</span>
             </div>
-            <h1 className="text-xl font-bold text-slate-100">✅ To-Do Chat</h1>
-            <p className="text-xs text-slate-400 mt-1">Your to-do list, managed entirely by chatting.</p>
+            <h1 style={{ fontFamily: FONT_DISPLAY }} className="text-2xl font-bold text-[#170F26]">Aspri</h1>
+            <p className="text-xs text-zinc-500 mt-1">Your to-do list, managed entirely by chatting.</p>
           </div>
 
-          <div className="flex rounded-xl bg-slate-950/60 p-1 border border-slate-800 mb-6">
+          <div className="flex rounded-2xl bg-[#FAF7FF] p-1 border-2 border-[#170F26] mb-6">
             <button
+              type="button"
               onClick={() => { setAuthMode('login'); setAuthError(null); }}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'login' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'text-slate-400'
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+                authMode === 'login' ? 'bg-[#6D28D9] text-white shadow-[2px_2px_0_0_#170F26]' : 'text-zinc-500 hover:text-[#170F26]'
               }`}
             >
               Log in
             </button>
             <button
+              type="button"
               onClick={() => { setAuthMode('signup'); setAuthError(null); }}
-              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                authMode === 'signup' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'text-slate-400'
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+                authMode === 'signup' ? 'bg-[#6D28D9] text-white shadow-[2px_2px_0_0_#170F26]' : 'text-zinc-500 hover:text-[#170F26]'
               }`}
             >
               Sign up
@@ -279,14 +338,14 @@ export default function AspriDashboard() {
           </div>
 
           {authError && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+            <div className="mb-4 p-3 rounded-xl bg-rose-50 border-2 border-[#FB4D67] text-rose-700 text-xs flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" />
               <span>{authError}</span>
             </div>
           )}
 
           {authMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2">
+            <div className="mb-4 p-3 rounded-xl bg-emerald-50 border-2 border-[#16C172] text-emerald-800 text-xs flex items-center gap-2">
               <Sparkles className="w-4 h-4 shrink-0" />
               <span>{authMessage}</span>
             </div>
@@ -294,31 +353,35 @@ export default function AspriDashboard() {
 
           <form onSubmit={handleAuth} className="space-y-4">
             <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1.5">Email address</label>
+              <label className="text-[11px] font-bold text-[#170F26] block mb-1.5">Email address</label>
               <div className="relative flex items-center">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3" />
+                <Mail className="w-4 h-4 text-zinc-400 absolute left-3" />
                 <input
                   type="email"
+                  name="email"
+                  autoComplete="email"
                   required
                   value={authEmail}
                   onChange={e => setAuthEmail(e.target.value)}
-                  placeholder="michaelsidabutar@gmail.com"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none"
+                  placeholder="your email"
+                  className="w-full bg-white border-2 border-zinc-200 focus:border-[#6D28D9] rounded-xl pl-9 pr-4 py-2.5 text-xs text-[#170F26] placeholder-zinc-400 focus:outline-none transition-all"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-[11px] font-semibold text-slate-400 block mb-1.5">Password</label>
+              <label className="text-[11px] font-bold text-[#170F26] block mb-1.5">Password</label>
               <div className="relative flex items-center">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3" />
+                <Lock className="w-4 h-4 text-zinc-400 absolute left-3" />
                 <input
                   type="password"
+                  name="password"
+                  autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
                   required
                   value={authPassword}
                   onChange={e => setAuthPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-100 placeholder-slate-600 focus:outline-none"
+                  className="w-full bg-white border-2 border-zinc-200 focus:border-[#6D28D9] rounded-xl pl-9 pr-4 py-2.5 text-xs text-[#170F26] placeholder-zinc-400 focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -326,7 +389,7 @@ export default function AspriDashboard() {
             <button
               type="submit"
               disabled={authLoading}
-              className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold rounded-xl text-xs transition-all shadow-md shadow-emerald-500/10 flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-[#170F26] hover:bg-[#2A1E42] disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-all shadow-[3px_3px_0_0_#6D28D9] flex items-center justify-center gap-2"
             >
               {authLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               <span>{authMode === 'login' ? 'Log in' : 'Create account'}</span>
@@ -347,51 +410,66 @@ export default function AspriDashboard() {
   ] as const;
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-100 font-sans antialiased selection:bg-emerald-500/30 overflow-hidden">
-      
-      {/* SIDEBAR */}
-      <aside className="w-80 border-r border-slate-800/60 bg-slate-900/40 backdrop-blur-xl flex flex-col justify-between shrink-0">
+    <div className="flex h-screen bg-[#FAF7FF] text-[#170F26] font-sans antialiased selection:bg-violet-200/60 overflow-hidden relative">
+      <FontImport />
+
+      {isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 bg-[#170F26]/30 backdrop-blur-xs z-30 md:hidden"
+        />
+      )}
+
+      <aside
+        className={`fixed md:relative inset-y-0 left-0 z-40 w-80 max-w-[85vw] border-r-2 border-[#170F26] bg-white flex flex-col justify-between shrink-0 transition-transform duration-300 ease-in-out ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:hidden'
+        }`}
+      >
         <div className="flex flex-col min-h-0 flex-1">
-          
-          {/* User Account Bar */}
-          <div className="p-3.5 mx-3 mt-3 rounded-xl border border-slate-800/80 bg-slate-900/60 flex items-center justify-between">
+          <div className="p-3.5 mx-3 mt-3 rounded-2xl border-2 border-[#170F26] bg-[#FAF7FF] flex items-center justify-between shadow-[3px_3px_0_0_#170F26]">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center font-bold text-slate-950 text-xs shadow-md shadow-emerald-500/10">
-                MS
+              <div className="w-8 h-8 rounded-xl bg-[#6D28D9] flex items-center justify-center font-bold text-white text-xs shrink-0 rotate-[-3deg]">
+                <span style={{ fontFamily: FONT_DISPLAY }}>MS</span>
               </div>
               <div className="truncate">
-                <p className="text-xs font-semibold text-slate-200 truncate">{sessionUser.email}</p>
+                <p className="text-xs font-bold text-[#170F26] truncate">{sessionUser.email}</p>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[10px] text-slate-400 font-medium">Pro Workspace</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#16C172]" />
+                  <span className="text-[10px] text-zinc-500 font-semibold">Pro Workspace</span>
                 </div>
               </div>
             </div>
-            <button 
+            <button
               onClick={handleSignOut}
-              className="text-slate-400 hover:text-slate-200 p-1.5 hover:bg-slate-800/60 rounded-lg transition-colors"
+              title="Sign out"
+              className="text-[#170F26] hover:text-[#FB4D67] p-1.5 hover:bg-rose-50 rounded-lg transition-colors ml-1 shrink-0"
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {/* Quick Filters */}
           <div className="px-3 pt-4 pb-2">
-            <p className="px-2 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Filters</p>
+            <p className="px-2 text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Filters</p>
             <div className="grid grid-cols-2 gap-1.5">
               {filterOptions.map(({ key, label, icon: Icon }) => {
                 const active = activeFilter === key;
+                const style = FILTER_STYLES[key];
                 return (
                   <button
                     key={key}
-                    onClick={() => setActiveFilter(key)}
-                    className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-all ${
-                      active 
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm' 
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border border-transparent'
+                    onClick={() => {
+                      setActiveFilter(key);
+                      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                        setIsSidebarOpen(false);
+                      }
+                    }}
+                    className={`flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-bold transition-all border-2 ${
+                      active
+                        ? `${style.active} border-[#170F26] shadow-[2px_2px_0_0_#170F26]`
+                        : 'text-zinc-500 border-transparent hover:border-zinc-200 hover:bg-zinc-50'
                     }`}
                   >
-                    <Icon className={`w-3.5 h-3.5 ${active ? 'text-emerald-400' : 'text-slate-500'}`} />
+                    <Icon className={`w-3.5 h-3.5 ${active ? '' : style.icon}`} />
                     <span>{label}</span>
                   </button>
                 );
@@ -399,18 +477,15 @@ export default function AspriDashboard() {
             </div>
           </div>
 
-          {/* Scrollable Container */}
           <div className="flex-1 overflow-y-auto px-3 py-2 space-y-5 custom-scrollbar">
-            
-            {/* Task Section */}
             <div>
               <div className="flex items-center justify-between px-2 mb-2">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tasks</span>
-                <span className="text-[10px] text-slate-500 font-mono">{todos.length} Active</span>
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Tasks</span>
+                <span style={{ fontFamily: FONT_MONO }} className="text-[10px] text-[#6D28D9] font-semibold">{todos.length} Active</span>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {todos.length === 0 ? (
-                  <div className="p-3 text-center rounded-xl border border-dashed border-slate-800/80 text-xs text-slate-500">
+                  <div className="p-3 text-center rounded-xl border-2 border-dashed border-zinc-200 text-xs text-zinc-400">
                     Nothing here — ask me to add something!
                   </div>
                 ) : (
@@ -419,38 +494,40 @@ export default function AspriDashboard() {
                     const catEmoji = CATEGORY_EMOJI[category] || '📌';
                     const priority = todo.priority || 'medium';
                     const priorityEmoji = PRIORITY_EMOJI[priority] || '🟡';
+                    const cs = categoryStyle(category);
 
                     return (
-                      <div 
+                      <div
                         key={todo.id}
-                        className="group relative p-2.5 rounded-xl bg-slate-900/40 border border-slate-800/60 hover:border-slate-700/80 hover:bg-slate-900/80 transition-all shadow-sm"
+                        className={`group relative p-2.5 pl-3 rounded-xl bg-white border-2 border-zinc-200 hover:border-[#170F26] hover:shadow-[2px_2px_0_0_#170F26] hover:-translate-y-0.5 transition-all border-l-4 ${cs.border}`}
                       >
+                        <Pin className={`w-3 h-3 absolute -top-1.5 -left-1.5 ${cs.text} rotate-[-30deg] opacity-70`} />
                         <div className="flex items-start gap-2.5">
-                          <button 
+                          <button
                             onClick={() => toggleTodo(todo)}
-                            className="mt-0.5 text-slate-500 hover:text-emerald-400 transition-colors"
+                            className="mt-0.5 text-zinc-300 hover:text-[#16C172] transition-colors"
                           >
                             {todo.is_done ? (
-                              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                              <CheckCircle2 className="w-4 h-4 text-[#16C172]" />
                             ) : (
                               <Circle className="w-4 h-4" />
                             )}
                           </button>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-medium leading-snug ${todo.is_done ? 'line-through text-slate-500' : 'text-slate-200'}`}>
+                            <p className={`text-xs font-semibold leading-snug ${todo.is_done ? 'line-through text-zinc-400' : 'text-[#170F26]'}`}>
                               {todo.task}
                             </p>
                             <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                              <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-medium">
+                              <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md border font-bold ${cs.bg} ${cs.border} ${cs.text}`}>
                                 <span>{catEmoji}</span>
                                 <span>{category}</span>
                               </span>
-                              <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-300 font-medium">
+                              <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-700 font-bold">
                                 <span>{priorityEmoji}</span>
                               </span>
                               {todo.due_at && (
-                                <span className="inline-flex items-center gap-1 text-[10px] text-slate-400 font-mono ml-auto">
-                                  <Clock className="w-2.5 h-2.5 text-slate-500" />
+                                <span style={{ fontFamily: FONT_MONO }} className="inline-flex items-center gap-1 text-[10px] text-zinc-500 ml-auto">
+                                  <Clock className="w-2.5 h-2.5 text-zinc-400" />
                                   {humanizeDue(todo.due_at)}
                                 </span>
                               )}
@@ -464,29 +541,28 @@ export default function AspriDashboard() {
               </div>
             </div>
 
-            {/* Notes Section */}
             <div>
               <div className="flex items-center justify-between px-2 mb-2">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                  <FileText className="w-3 h-3 text-slate-400" />
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                  <FileText className="w-3 h-3 text-zinc-400" />
                   <span>Notes</span>
                 </div>
-                <span className="text-[10px] text-slate-500 font-mono">{notes.length} saved</span>
+                <span style={{ fontFamily: FONT_MONO }} className="text-[10px] text-[#6D28D9] font-semibold">{notes.length} saved</span>
               </div>
               <div className="space-y-2">
                 {notes.length === 0 ? (
-                  <div className="p-3 text-center rounded-xl border border-dashed border-slate-800/80 text-xs text-slate-500">
+                  <div className="p-3 text-center rounded-xl border-2 border-dashed border-zinc-200 text-xs text-zinc-400">
                     No notes yet — try "note that..."
                   </div>
                 ) : (
                   notes.map(note => (
-                    <div key={note.id} className="p-3 rounded-xl bg-slate-900/30 border border-slate-800/50 hover:border-slate-700/60 transition-all text-xs text-slate-300 leading-relaxed group">
-                      <p className="line-clamp-4 font-mono text-[11px] text-slate-300/90">{note.content}</p>
-                      <div className="mt-2.5 pt-2 border-t border-slate-800/40 flex items-center justify-between text-[10px] text-slate-500">
+                    <div key={note.id} className="p-3 rounded-xl bg-[#FFFBEB] border-2 border-amber-200 transition-all text-xs text-zinc-800 leading-relaxed group">
+                      <p style={{ fontFamily: FONT_MONO }} className="line-clamp-4 text-[11px] text-[#170F26]">{note.content}</p>
+                      <div className="mt-2.5 pt-2 border-t border-amber-200 flex items-center justify-between text-[10px] text-zinc-500">
                         <span>{new Date(note.created_at).toLocaleDateString()}</span>
-                        <button 
+                        <button
                           onClick={() => navigator.clipboard.writeText(note.content)}
-                          className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="flex items-center gap-1 text-[#6D28D9] hover:text-[#4C1D95] font-bold transition-opacity"
                         >
                           <span>Copy</span>
                           <ExternalLink className="w-2.5 h-2.5" />
@@ -497,96 +573,99 @@ export default function AspriDashboard() {
                 )}
               </div>
             </div>
-
           </div>
         </div>
       </aside>
 
-      {/* MAIN WORKSPACE PANEL */}
-      <main className="flex-1 flex flex-col h-full bg-slate-950 relative overflow-hidden">
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
+      <main className="flex-1 flex flex-col h-full bg-[#FAF7FF] relative overflow-hidden">
+        <header className="h-14 border-b-2 border-[#170F26] px-4 sm:px-6 flex items-center justify-between bg-white/90 backdrop-blur-md z-10">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-1.5 rounded-lg bg-[#FAF7FF] hover:bg-violet-100 text-[#6D28D9] transition-colors border-2 border-[#170F26]"
+              title={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+            >
+              {isSidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
 
-        {/* Top Header */}
-        <header className="h-14 border-b border-slate-800/60 px-6 flex items-center justify-between bg-slate-950/80 backdrop-blur-md z-10">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div>
-              <h1 className="text-sm font-semibold text-slate-100">To-Do Assistant</h1>
-              <p className="text-[10px] text-slate-400">Groq Orchestrator • Low-Latency Response</p>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-[#6D28D9] flex items-center justify-center text-white rotate-[-3deg]">
+                <span style={{ fontFamily: FONT_DISPLAY }} className="text-xs font-bold">A</span>
+              </div>
+              <div>
+                <h1 style={{ fontFamily: FONT_DISPLAY }} className="text-xs sm:text-sm font-bold text-[#170F26]">Aspri</h1>
+                <p className="text-[10px] text-zinc-400 hidden sm:block">Groq Orchestrator • Low-Latency Response</p>
+              </div>
             </div>
           </div>
+
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-full bg-slate-800/80 border border-slate-700/50 text-[10px] font-mono text-slate-400">
-              v1.0 (Next.js)
+            <span style={{ fontFamily: FONT_MONO }} className="px-2 py-0.5 rounded-full bg-[#170F26] text-[10px] text-white font-semibold">
+              v1.0
             </span>
           </div>
         </header>
 
-        {/* Suggestion Bar */}
-        <div className="px-6 py-2 border-b border-slate-800/40 bg-slate-900/20 flex items-center gap-2 text-xs text-slate-400 overflow-x-auto z-10 no-scrollbar">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1 shrink-0">
+        <div className="px-4 sm:px-6 py-2 border-b border-zinc-200 bg-white flex items-center gap-2 text-xs text-zinc-600 overflow-x-auto z-10 no-scrollbar">
+          <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1 shrink-0">
             <span>Try</span>
             <ChevronRight className="w-3 h-3" />
           </span>
-          <button 
+          <button
             onClick={() => handleSend("remind me to check my inbox about performance review tomorrow at 10am")}
-            className="px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-800/60 text-slate-300 text-xs transition-all whitespace-nowrap"
+            className="px-3 py-1 rounded-lg bg-white border-2 border-zinc-200 hover:border-[#6D28D9] hover:text-[#6D28D9] text-zinc-700 text-xs font-medium transition-all whitespace-nowrap shrink-0"
           >
             "remind me to check my inbox about performance review tomorrow at 10am"
           </button>
-          <button 
+          <button
             onClick={() => handleSend("what's due today?")}
-            className="px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-800/60 text-slate-300 text-xs transition-all whitespace-nowrap"
+            className="px-3 py-1 rounded-lg bg-white border-2 border-zinc-200 hover:border-[#6D28D9] hover:text-[#6D28D9] text-zinc-700 text-xs font-medium transition-all whitespace-nowrap shrink-0"
           >
             "what's due today?"
           </button>
-          <button 
+          <button
             onClick={() => handleSend("note that the wifi password is x")}
-            className="px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:border-slate-700 hover:bg-slate-800/60 text-slate-300 text-xs transition-all whitespace-nowrap"
+            className="px-3 py-1 rounded-lg bg-white border-2 border-zinc-200 hover:border-[#6D28D9] hover:text-[#6D28D9] text-zinc-700 text-xs font-medium transition-all whitespace-nowrap shrink-0"
           >
             "note that the wifi password is x"
           </button>
         </div>
 
-        {/* Alert Banners */}
         {(overdueTodos.length > 0 || todayTodos.length > 0) && (
-          <div className="px-6 pt-3 space-y-2 z-10">
+          <div className="px-4 sm:px-6 pt-3 space-y-2 z-10">
             {overdueTodos.length > 0 && (
-              <div className="px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <div className="px-3 py-2 rounded-xl bg-[#FB4D67] border-2 border-[#170F26] text-white text-xs font-semibold flex items-center gap-2 shadow-[2px_2px_0_0_#170F26]">
+                <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>⏰ {overdueTodos.length} overdue: {overdueTodos.slice(0, 3).map(t => t.task).join(', ')}{overdueTodos.length > 3 ? '...' : ''}</span>
               </div>
             )}
             {todayTodos.length > 0 && (
-              <div className="px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center gap-2">
-                <Clock className="w-4 h-4 shrink-0 text-amber-400" />
+              <div className="px-3 py-2 rounded-xl bg-[#FFC53D] border-2 border-[#170F26] text-[#170F26] text-xs font-semibold flex items-center gap-2 shadow-[2px_2px_0_0_#170F26]">
+                <Clock className="w-4 h-4 shrink-0" />
                 <span>📅 Due today: {todayTodos.slice(0, 3).map(t => t.task).join(', ')}{todayTodos.length > 3 ? '...' : ''}</span>
               </div>
             )}
           </div>
         )}
 
-        {/* Chat Feed */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5 z-10 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5 z-10 custom-scrollbar">
           {messages.map((msg, i) => (
-            <div 
-              key={i} 
-              className={`flex items-start gap-3 max-w-3xl ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
+            <div
+              key={i}
+              className={`flex items-start gap-2.5 sm:gap-3 max-w-3xl ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
             >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold ${
-                msg.role === 'user' 
-                  ? 'bg-slate-800 border border-slate-700 text-slate-200' 
-                  : 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400'
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold border-2 border-[#170F26] ${
+                msg.role === 'user'
+                  ? 'bg-[#6D28D9] text-white'
+                  : 'bg-white text-[#170F26]'
               }`}>
                 {msg.role === 'user' ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
               </div>
 
-              <div className={`p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                msg.role === 'user' 
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-tr-none' 
-                  : 'bg-slate-900/90 border border-slate-800 text-slate-200 rounded-tl-none'
+              <div className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed border-2 border-[#170F26] ${
+                msg.role === 'user'
+                  ? 'bg-[#6D28D9] text-white rounded-tr-none shadow-[3px_3px_0_0_#170F26]'
+                  : 'bg-white text-[#170F26] rounded-tl-none shadow-[3px_3px_0_0_#170F26]'
               }`}>
                 {msg.content}
               </div>
@@ -594,21 +673,20 @@ export default function AspriDashboard() {
           ))}
 
           {isSending && (
-            <div className="flex items-start gap-3 max-w-3xl">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+            <div className="flex items-start gap-2.5 sm:gap-3 max-w-3xl">
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold border-2 border-[#170F26] bg-white text-[#170F26]">
                 <Bot className="w-3.5 h-3.5" />
               </div>
-              <div className="p-4 rounded-2xl text-sm leading-relaxed bg-slate-900/90 border border-slate-800 text-slate-400 rounded-tl-none flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+              <div className="p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed bg-white border-2 border-[#170F26] text-zinc-500 rounded-tl-none shadow-[3px_3px_0_0_#170F26] flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-[#6D28D9]" />
                 <span>Thinking...</span>
               </div>
             </div>
           )}
         </div>
 
-        {/* Bottom Command Bar */}
-        <div className="p-4 z-10">
-          <form 
+        <div className="p-3 sm:p-4 z-10 bg-white border-t-2 border-[#170F26]">
+          <form
             onSubmit={(e) => { e.preventDefault(); handleSend(); }}
             className="max-w-3xl mx-auto relative flex items-center"
           >
@@ -617,18 +695,17 @@ export default function AspriDashboard() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Tell me what to do..."
-              className="w-full bg-slate-900/90 border border-slate-800 focus:border-emerald-500/80 rounded-2xl pl-4 pr-12 py-3 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500/40 shadow-xl backdrop-blur-xl transition-all"
+              className="w-full bg-white border-2 border-zinc-200 focus:border-[#6D28D9] rounded-2xl pl-4 pr-12 py-2.5 sm:py-3 text-xs sm:text-sm text-[#170F26] placeholder-zinc-400 focus:outline-none transition-all"
             />
             <button
               type="submit"
               disabled={isSending || !input.trim()}
-              className="absolute right-2 p-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:hover:bg-emerald-500 text-slate-950 font-bold rounded-xl transition-all shadow-md shadow-emerald-500/20"
+              className="absolute right-2 p-2 bg-[#6D28D9] hover:bg-[#4C1D95] disabled:opacity-30 disabled:hover:bg-[#6D28D9] text-white font-bold rounded-xl transition-all"
             >
               <Send className="w-4 h-4" />
             </button>
           </form>
         </div>
-
       </main>
     </div>
   );
