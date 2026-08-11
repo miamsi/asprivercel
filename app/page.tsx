@@ -15,7 +15,6 @@ import {
   ListFilter,
   Sparkles,
   Bot,
-  User,
   ExternalLink,
   AlertTriangle,
   Lock,
@@ -23,7 +22,6 @@ import {
   Loader2,
   Menu,
   X,
-  Pin,
 } from 'lucide-react';
 import { humanizeDue } from '@/lib/time_utils';
 import { CATEGORY_EMOJI, PRIORITY_EMOJI } from '@/lib/connectors/todos';
@@ -45,17 +43,21 @@ const supabase = createClient(
 );
 
 // --- Design tokens -----------------------------------------------------
-// canvas #FAF7FF · ink #170F26 · violet #6D28D9 · rose #FB4D67
-// amber #FFC53D · emerald #16C172 · sky #2F8FFF
-const FONT_DISPLAY = "'Space Grotesk', ui-sans-serif, system-ui, sans-serif";
-const FONT_MONO = "'JetBrains Mono', ui-monospace, monospace";
+// Apple-style system palette (light mode):
+// canvas #F5F5F7 · surface #FFFFFF · ink #1D1D1F · secondary #6E6E73
+// accent (systemBlue) #0071E3 · red #FF3B30 · orange #FF9500 · green #34C759 · indigo #5E5CE6
+// Typography intentionally uses the OS font stack rather than a webfont —
+// on Apple devices this renders as San Francisco with zero network cost.
+const FONT_DISPLAY =
+  '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif';
+const FONT_MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
 const CATEGORY_PALETTE = [
-  { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-700', dot: 'bg-violet-500' },
-  { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-700', dot: 'bg-rose-500' },
-  { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', dot: 'bg-amber-500' },
-  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-  { bg: 'bg-sky-50', border: 'border-sky-200', text: 'text-sky-700', dot: 'bg-sky-500' },
+  { bg: 'bg-[#EAF3FE]', text: 'text-[#0071E3]', dot: 'bg-[#0071E3]' },
+  { bg: 'bg-[#FDEEF1]', text: 'text-[#E0245E]', dot: 'bg-[#E0245E]' },
+  { bg: 'bg-[#FFF4E5]', text: 'text-[#C2670A]', dot: 'bg-[#FF9500]' },
+  { bg: 'bg-[#E9F9EE]', text: 'text-[#1F8A3B]', dot: 'bg-[#34C759]' },
+  { bg: 'bg-[#F1EFFE]', text: 'text-[#5E5CE6]', dot: 'bg-[#5E5CE6]' },
 ] as const;
 
 function categoryStyle(category: string) {
@@ -64,13 +66,13 @@ function categoryStyle(category: string) {
   return CATEGORY_PALETTE[hash % CATEGORY_PALETTE.length];
 }
 
-const FILTER_STYLES: Record<string, { active: string; ring: string; icon: string }> = {
-  open: { active: 'bg-[#6D28D9] text-white', ring: 'ring-violet-200', icon: 'text-violet-500' },
-  today: { active: 'bg-[#FFC53D] text-[#170F26]', ring: 'ring-amber-200', icon: 'text-amber-500' },
-  overdue: { active: 'bg-[#FB4D67] text-white', ring: 'ring-rose-200', icon: 'text-rose-500' },
-  upcoming: { active: 'bg-[#2F8FFF] text-white', ring: 'ring-sky-200', icon: 'text-sky-500' },
-  done: { active: 'bg-[#16C172] text-white', ring: 'ring-emerald-200', icon: 'text-emerald-500' },
-  all: { active: 'bg-[#170F26] text-white', ring: 'ring-zinc-300', icon: 'text-zinc-500' },
+const FILTER_STYLES: Record<string, { active: string; icon: string }> = {
+  open: { active: 'bg-[#0071E3] text-white', icon: 'text-[#0071E3]' },
+  today: { active: 'bg-[#FF9500] text-white', icon: 'text-[#FF9500]' },
+  overdue: { active: 'bg-[#FF3B30] text-white', icon: 'text-[#FF3B30]' },
+  upcoming: { active: 'bg-[#5E5CE6] text-white', icon: 'text-[#5E5CE6]' },
+  done: { active: 'bg-[#34C759] text-white', icon: 'text-[#34C759]' },
+  all: { active: 'bg-[#1D1D1F] text-white', icon: 'text-[#6E6E73]' },
 };
 
 interface Todo {
@@ -94,6 +96,37 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
+
+// Global styles shared by both the auth screen and the dashboard: font
+// smoothing, a slim macOS-style scrollbar, and respect for reduced motion.
+const GlobalStyle = () => (
+  <style jsx global>{`
+    * {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .apple-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .apple-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .apple-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 999px;
+    }
+    .apple-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.28);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  `}</style>
+);
 
 export default function AspriDashboard() {
   const [sessionUser, setSessionUser] = useState<{ id: string; email: string } | null>(null);
@@ -295,105 +328,104 @@ export default function AspriDashboard() {
     }
   };
 
-  const FontImport = () => (
-    <style jsx global>{`
-      @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap');
-    `}</style>
-  );
-
   // --- Auth screen -----------------------------------------------------
   if (!sessionUser) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#FAF7FF] p-4 font-sans antialiased text-[#170F26]">
-        <FontImport />
-        <div className="w-full max-w-md rounded-3xl border-2 border-[#170F26] bg-white p-6 sm:p-8 shadow-[6px_6px_0_0_#170F26]">
-          <div className="text-center mb-6">
-            <div className="inline-flex w-14 h-14 items-center justify-center rounded-2xl bg-[#6D28D9] text-white mb-3 rotate-[-3deg] shadow-[3px_3px_0_0_#170F26]">
-              <span style={{ fontFamily: FONT_DISPLAY }} className="text-2xl font-bold">A</span>
+      <div
+        className="flex min-h-[100dvh] items-center justify-center bg-[#F5F5F7] px-4 py-10 text-[#1D1D1F]"
+        style={{ fontFamily: FONT_DISPLAY }}
+      >
+        <GlobalStyle />
+        <div className="w-full max-w-[380px]">
+          <div className="text-center mb-8">
+            <div className="inline-flex w-16 h-16 items-center justify-center rounded-[20px] bg-gradient-to-b from-[#0071E3] to-[#0058B0] text-white shadow-[0_8px_24px_rgba(0,113,227,0.35)] mb-4">
+              <span className="text-2xl font-semibold tracking-tight">A</span>
             </div>
-            <h1 style={{ fontFamily: FONT_DISPLAY }} className="text-2xl font-bold text-[#170F26]">Aspri</h1>
-            <p className="text-xs text-zinc-500 mt-1">Your to-do list, managed entirely by chatting.</p>
+            <h1 className="text-[26px] font-semibold tracking-tight">Aspri</h1>
+            <p className="text-[13px] text-[#6E6E73] mt-1.5">Your to-do list, managed entirely by chatting.</p>
           </div>
 
-          <div className="flex rounded-2xl bg-[#FAF7FF] p-1 border-2 border-[#170F26] mb-6">
-            <button
-              type="button"
-              onClick={() => { setAuthMode('login'); setAuthError(null); }}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
-                authMode === 'login' ? 'bg-[#6D28D9] text-white shadow-[2px_2px_0_0_#170F26]' : 'text-zinc-500 hover:text-[#170F26]'
-              }`}
-            >
-              Log in
-            </button>
-            <button
-              type="button"
-              onClick={() => { setAuthMode('signup'); setAuthError(null); }}
-              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
-                authMode === 'signup' ? 'bg-[#6D28D9] text-white shadow-[2px_2px_0_0_#170F26]' : 'text-zinc-500 hover:text-[#170F26]'
-              }`}
-            >
-              Sign up
-            </button>
+          <div className="rounded-2xl bg-white border border-[#D2D2D7]/60 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_16px_40px_rgba(0,0,0,0.07)] p-6 sm:p-7">
+            <div className="flex rounded-[10px] bg-[#F5F5F7] p-1 mb-6">
+              <button
+                type="button"
+                onClick={() => { setAuthMode('login'); setAuthError(null); }}
+                className={`flex-1 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/40 ${
+                  authMode === 'login' ? 'bg-white text-[#1D1D1F] shadow-[0_1px_3px_rgba(0,0,0,0.12)]' : 'text-[#6E6E73]'
+                }`}
+              >
+                Log in
+              </button>
+              <button
+                type="button"
+                onClick={() => { setAuthMode('signup'); setAuthError(null); }}
+                className={`flex-1 py-1.5 text-[13px] font-medium rounded-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/40 ${
+                  authMode === 'signup' ? 'bg-white text-[#1D1D1F] shadow-[0_1px_3px_rgba(0,0,0,0.12)]' : 'text-[#6E6E73]'
+                }`}
+              >
+                Sign up
+              </button>
+            </div>
+
+            {authError && (
+              <div className="mb-4 px-3 py-2.5 rounded-xl bg-[#FDEEF1] text-[#E0245E] text-[13px] flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            {authMessage && (
+              <div className="mb-4 px-3 py-2.5 rounded-xl bg-[#E9F9EE] text-[#1F8A3B] text-[13px] flex items-start gap-2">
+                <Sparkles className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{authMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAuth} className="space-y-3.5">
+              <div>
+                <label className="text-[12px] font-medium text-[#6E6E73] block mb-1.5">Email address</label>
+                <div className="relative flex items-center">
+                  <Mail className="w-4 h-4 text-[#86868B] absolute left-3.5 pointer-events-none" />
+                  <input
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    required
+                    value={authEmail}
+                    onChange={e => setAuthEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full bg-[#F5F5F7] border border-transparent focus:border-[#0071E3] focus:bg-white rounded-xl pl-10 pr-3.5 py-2.5 text-[14px] text-[#1D1D1F] placeholder-[#86868B] focus:outline-none focus:ring-4 focus:ring-[#0071E3]/10 transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[12px] font-medium text-[#6E6E73] block mb-1.5">Password</label>
+                <div className="relative flex items-center">
+                  <Lock className="w-4 h-4 text-[#86868B] absolute left-3.5 pointer-events-none" />
+                  <input
+                    type="password"
+                    name="password"
+                    autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
+                    required
+                    value={authPassword}
+                    onChange={e => setAuthPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-[#F5F5F7] border border-transparent focus:border-[#0071E3] focus:bg-white rounded-xl pl-10 pr-3.5 py-2.5 text-[14px] text-[#1D1D1F] placeholder-[#86868B] focus:outline-none focus:ring-4 focus:ring-[#0071E3]/10 transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full py-2.5 mt-1 bg-[#0071E3] hover:bg-[#0077ED] active:bg-[#0068D1] disabled:opacity-50 text-white font-medium rounded-xl text-[14px] transition-all duration-200 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/40 focus-visible:ring-offset-2"
+              >
+                {authLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                <span>{authMode === 'login' ? 'Log in' : 'Create account'}</span>
+              </button>
+            </form>
           </div>
-
-          {authError && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-50 border-2 border-[#FB4D67] text-rose-700 text-xs flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>{authError}</span>
-            </div>
-          )}
-
-          {authMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-emerald-50 border-2 border-[#16C172] text-emerald-800 text-xs flex items-center gap-2">
-              <Sparkles className="w-4 h-4 shrink-0" />
-              <span>{authMessage}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleAuth} className="space-y-4">
-            <div>
-              <label className="text-[11px] font-bold text-[#170F26] block mb-1.5">Email address</label>
-              <div className="relative flex items-center">
-                <Mail className="w-4 h-4 text-zinc-400 absolute left-3" />
-                <input
-                  type="email"
-                  name="email"
-                  autoComplete="email"
-                  required
-                  value={authEmail}
-                  onChange={e => setAuthEmail(e.target.value)}
-                  placeholder="your email"
-                  className="w-full bg-white border-2 border-zinc-200 focus:border-[#6D28D9] rounded-xl pl-9 pr-4 py-2.5 text-xs text-[#170F26] placeholder-zinc-400 focus:outline-none transition-all"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-bold text-[#170F26] block mb-1.5">Password</label>
-              <div className="relative flex items-center">
-                <Lock className="w-4 h-4 text-zinc-400 absolute left-3" />
-                <input
-                  type="password"
-                  name="password"
-                  autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
-                  required
-                  value={authPassword}
-                  onChange={e => setAuthPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-white border-2 border-zinc-200 focus:border-[#6D28D9] rounded-xl pl-9 pr-4 py-2.5 text-xs text-[#170F26] placeholder-zinc-400 focus:outline-none transition-all"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={authLoading}
-              className="w-full py-2.5 bg-[#170F26] hover:bg-[#2A1E42] disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-all shadow-[3px_3px_0_0_#6D28D9] flex items-center justify-center gap-2"
-            >
-              {authLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              <span>{authMode === 'login' ? 'Log in' : 'Create account'}</span>
-            </button>
-          </form>
         </div>
       </div>
     );
@@ -409,41 +441,51 @@ export default function AspriDashboard() {
   ] as const;
 
   return (
-    <div className="flex h-screen bg-[#FAF7FF] text-[#170F26] font-sans antialiased selection:bg-violet-200/60 overflow-hidden relative">
-      <FontImport />
+    <div
+      className="flex h-[100dvh] w-full bg-[#F5F5F7] text-[#1D1D1F] overflow-hidden relative"
+      style={{ fontFamily: FONT_DISPLAY }}
+    >
+      <GlobalStyle />
 
+      {/* Mobile-only backdrop behind the sidebar drawer */}
       {isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
-          className="fixed inset-0 bg-[#170F26]/30 backdrop-blur-xs z-30 md:hidden"
+          className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-30 md:hidden transition-opacity duration-300"
         />
       )}
 
+      {/*
+        Sidebar behaves differently per breakpoint without ever using
+        `display: none`, so the same element can animate smoothly both ways:
+          - mobile (<768px): fixed overlay drawer, slides via translate-x
+          - desktop (>=768px): in-flow panel, collapses via negative margin
+      */}
       <aside
-        className={`fixed md:relative inset-y-0 left-0 z-40 w-80 max-w-[85vw] border-r-2 border-[#170F26] bg-white flex flex-col justify-between shrink-0 transition-all duration-300 ease-in-out ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:hidden hidden'
-        }`}
+        className={`fixed md:relative inset-y-0 left-0 z-40 w-[85vw] max-w-[320px] md:w-[300px] md:max-w-none shrink-0 bg-white/90 md:bg-white/70 backdrop-blur-2xl border-r border-[#D2D2D7]/70 flex flex-col transition-transform md:transition-[margin-left] duration-300 ease-out ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0 ${isSidebarOpen ? 'md:ml-0' : 'md:-ml-[300px]'}`}
       >
         <div className="flex flex-col min-h-0 flex-1">
-          <div className="p-3.5 mx-3 mt-3 rounded-2xl border-2 border-[#170F26] bg-[#FAF7FF] flex items-center justify-between shadow-[3px_3px_0_0_#170F26]">
+          <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-3">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-xl bg-[#6D28D9] flex items-center justify-center font-bold text-white text-xs shrink-0 rotate-[-3deg]">
-                <span style={{ fontFamily: FONT_DISPLAY }}>MS</span>
+              <div className="w-9 h-9 rounded-full bg-gradient-to-b from-[#0071E3] to-[#0058B0] flex items-center justify-center text-white text-[13px] font-semibold shrink-0">
+                {sessionUser.email.charAt(0).toUpperCase()}
               </div>
-              <div className="truncate">
-                <p className="text-xs font-bold text-[#170F26] truncate">{sessionUser.email}</p>
+              <div className="min-w-0">
+                <p className="text-[13px] font-medium text-[#1D1D1F] truncate">{sessionUser.email}</p>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#16C172]" />
-                  <span className="text-[10px] text-zinc-500 font-semibold">Pro Workspace</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#34C759]" />
+                  <span className="text-[11px] text-[#6E6E73]">Active</span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0 ml-1">
+            <div className="flex items-center gap-0.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setIsSidebarOpen(false)}
                 title="Hide sidebar"
-                className="text-[#170F26] hover:text-[#6D28D9] p-1.5 hover:bg-violet-100 rounded-lg transition-colors"
+                className="text-[#6E6E73] hover:text-[#1D1D1F] hover:bg-black/[0.05] p-1.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/40"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -451,15 +493,15 @@ export default function AspriDashboard() {
                 type="button"
                 onClick={handleSignOut}
                 title="Sign out"
-                className="text-[#170F26] hover:text-[#FB4D67] p-1.5 hover:bg-rose-50 rounded-lg transition-colors"
+                className="text-[#6E6E73] hover:text-[#FF3B30] hover:bg-[#FF3B30]/[0.08] p-1.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF3B30]/40"
               >
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          <div className="px-3 pt-4 pb-2">
-            <p className="px-2 text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Filters</p>
+          <div className="px-4 pb-3">
+            <p className="text-[11px] font-medium text-[#86868B] uppercase tracking-wide mb-2 px-0.5">Filters</p>
             <div className="grid grid-cols-2 gap-1.5">
               {filterOptions.map(({ key, label, icon: Icon }) => {
                 const active = activeFilter === key;
@@ -467,16 +509,15 @@ export default function AspriDashboard() {
                 return (
                   <button
                     key={key}
+                    type="button"
                     onClick={() => {
                       setActiveFilter(key);
                       if (typeof window !== 'undefined' && window.innerWidth < 768) {
                         setIsSidebarOpen(false);
                       }
                     }}
-                    className={`flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs font-bold transition-all border-2 ${
-                      active
-                        ? `${style.active} border-[#170F26] shadow-[2px_2px_0_0_#170F26]`
-                        : 'text-zinc-500 border-transparent hover:border-zinc-200 hover:bg-zinc-50'
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[12.5px] font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/40 ${
+                      active ? `${style.active} shadow-[0_1px_2px_rgba(0,0,0,0.1)]` : 'text-[#4B4B4F] bg-black/[0.03] hover:bg-black/[0.06]'
                     }`}
                   >
                     <Icon className={`w-3.5 h-3.5 ${active ? '' : style.icon}`} />
@@ -487,16 +528,16 @@ export default function AspriDashboard() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-5 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-6 apple-scrollbar">
             <div>
-              <div className="flex items-center justify-between px-2 mb-2">
-                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Tasks</span>
-                <span style={{ fontFamily: FONT_MONO }} className="text-[10px] text-[#6D28D9] font-semibold">{todos.length} Active</span>
+              <div className="flex items-center justify-between px-0.5 mb-2">
+                <span className="text-[11px] font-medium text-[#86868B] uppercase tracking-wide">Tasks</span>
+                <span style={{ fontFamily: FONT_MONO }} className="text-[11px] text-[#0071E3] font-medium">{todos.length} active</span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 {todos.length === 0 ? (
-                  <div className="p-3 text-center rounded-xl border-2 border-dashed border-zinc-200 text-xs text-zinc-400">
-                    Nothing here — ask me to add something!
+                  <div className="py-6 text-center rounded-xl border border-dashed border-[#D2D2D7] text-[12.5px] text-[#86868B]">
+                    Nothing here — ask me to add something.
                   </div>
                 ) : (
                   todos.map(todo => {
@@ -509,39 +550,36 @@ export default function AspriDashboard() {
                     return (
                       <div
                         key={todo.id}
-                        className={`group relative p-2.5 pl-3 rounded-xl bg-white border-2 border-zinc-200 hover:border-[#170F26] hover:shadow-[2px_2px_0_0_#170F26] hover:-translate-y-0.5 transition-all border-l-4 ${cs.border}`}
+                        className="group flex items-start gap-2.5 p-2.5 rounded-xl hover:bg-black/[0.035] transition-colors duration-150"
                       >
-                        <Pin className={`w-3 h-3 absolute -top-1.5 -left-1.5 ${cs.text} rotate-[-3deg] opacity-70`} />
-                        <div className="flex items-start gap-2.5">
-                          <button
-                            onClick={() => toggleTodo(todo)}
-                            className="mt-0.5 text-zinc-300 hover:text-[#16C172] transition-colors"
-                          >
-                            {todo.is_done ? (
-                              <CheckCircle2 className="w-4 h-4 text-[#16C172]" />
-                            ) : (
-                              <Circle className="w-4 h-4" />
+                        <button
+                          onClick={() => toggleTodo(todo)}
+                          className="mt-0.5 text-[#C7C7CC] hover:text-[#34C759] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/40 rounded-full"
+                        >
+                          {todo.is_done ? (
+                            <CheckCircle2 className="w-[18px] h-[18px] text-[#34C759]" />
+                          ) : (
+                            <Circle className="w-[18px] h-[18px]" />
+                          )}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-[13px] leading-snug ${todo.is_done ? 'line-through text-[#AEAEB2]' : 'text-[#1D1D1F]'}`}>
+                            {todo.task}
+                          </p>
+                          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                            <span className={`inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded-full font-medium ${cs.bg} ${cs.text}`}>
+                              <span>{catEmoji}</span>
+                              <span>{category}</span>
+                            </span>
+                            <span className="inline-flex items-center text-[10.5px] px-1.5 py-0.5 rounded-full bg-black/[0.04] text-[#6E6E73]">
+                              {priorityEmoji}
+                            </span>
+                            {todo.due_at && (
+                              <span style={{ fontFamily: FONT_MONO }} className="inline-flex items-center gap-1 text-[10.5px] text-[#86868B] ml-auto">
+                                <Clock className="w-2.5 h-2.5" />
+                                {humanizeDue(todo.due_at)}
+                              </span>
                             )}
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs font-semibold leading-snug ${todo.is_done ? 'line-through text-zinc-400' : 'text-[#170F26]'}`}>
-                              {todo.task}
-                            </p>
-                            <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                              <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md border font-bold ${cs.bg} ${cs.border} ${cs.text}`}>
-                                <span>{catEmoji}</span>
-                                <span>{category}</span>
-                              </span>
-                              <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-100 text-zinc-700 font-bold">
-                                <span>{priorityEmoji}</span>
-                              </span>
-                              {todo.due_at && (
-                                <span style={{ fontFamily: FONT_MONO }} className="inline-flex items-center gap-1 text-[10px] text-zinc-500 ml-auto">
-                                  <Clock className="w-2.5 h-2.5 text-zinc-400" />
-                                  {humanizeDue(todo.due_at)}
-                                </span>
-                              )}
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -552,27 +590,27 @@ export default function AspriDashboard() {
             </div>
 
             <div>
-              <div className="flex items-center justify-between px-2 mb-2">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                  <FileText className="w-3 h-3 text-zinc-400" />
+              <div className="flex items-center justify-between px-0.5 mb-2">
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#86868B] uppercase tracking-wide">
+                  <FileText className="w-3 h-3" />
                   <span>Notes</span>
                 </div>
-                <span style={{ fontFamily: FONT_MONO }} className="text-[10px] text-[#6D28D9] font-semibold">{notes.length} saved</span>
+                <span style={{ fontFamily: FONT_MONO }} className="text-[11px] text-[#0071E3] font-medium">{notes.length} saved</span>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {notes.length === 0 ? (
-                  <div className="p-3 text-center rounded-xl border-2 border-dashed border-zinc-200 text-xs text-zinc-400">
-                    No notes yet — try "note that..."
+                  <div className="py-6 text-center rounded-xl border border-dashed border-[#D2D2D7] text-[12.5px] text-[#86868B]">
+                    No notes yet — try "note that…"
                   </div>
                 ) : (
                   notes.map(note => (
-                    <div key={note.id} className="p-3 rounded-xl bg-[#FFFBEB] border-2 border-amber-200 transition-all text-xs text-zinc-800 leading-relaxed group">
-                      <p style={{ fontFamily: FONT_MONO }} className="line-clamp-4 text-[11px] text-[#170F26]">{note.content}</p>
-                      <div className="mt-2.5 pt-2 border-t border-amber-200 flex items-center justify-between text-[10px] text-zinc-500">
+                    <div key={note.id} className="p-3 rounded-xl bg-[#FFF9E8] text-[12.5px] text-[#1D1D1F] leading-relaxed">
+                      <p style={{ fontFamily: FONT_MONO }} className="line-clamp-4 text-[12px]">{note.content}</p>
+                      <div className="mt-2 pt-2 border-t border-black/[0.06] flex items-center justify-between text-[10.5px] text-[#86868B]">
                         <span>{new Date(note.created_at).toLocaleDateString()}</span>
                         <button
                           onClick={() => navigator.clipboard.writeText(note.content)}
-                          className="flex items-center gap-1 text-[#6D28D9] hover:text-[#4C1D95] font-bold transition-opacity"
+                          className="flex items-center gap-1 text-[#0071E3] hover:text-[#0058B0] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/40 rounded"
                         >
                           <span>Copy</span>
                           <ExternalLink className="w-2.5 h-2.5" />
@@ -587,91 +625,90 @@ export default function AspriDashboard() {
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col h-full bg-[#FAF7FF] relative overflow-hidden">
-        <div className="p-3 sm:p-4 pb-0 z-20 flex items-center">
+      <main className="flex-1 flex flex-col h-full min-w-0 relative">
+        <div className="flex items-center gap-3 px-4 sm:px-6 h-14 shrink-0 bg-[#F5F5F7]/80 backdrop-blur-xl border-b border-[#D2D2D7]/70 z-20">
           <button
             type="button"
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 rounded-xl bg-white border-2 border-[#170F26] shadow-[2px_2px_0_0_#170F26] hover:bg-violet-50 transition-all flex items-center gap-1.5 text-xs font-bold text-[#170F26]"
-            title={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
+            className="p-2 -ml-2 rounded-lg hover:bg-black/[0.05] transition-colors text-[#1D1D1F] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/40"
+            title={isSidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
           >
-            <Menu className="w-4 h-4 text-[#170F26]" />
-            <span className="hidden sm:inline">{isSidebarOpen ? 'Hide Sidebar' : 'Show Sidebar'}</span>
+            <Menu className="w-[18px] h-[18px]" />
           </button>
+          <h1 className="text-[15px] font-semibold tracking-tight">Aspri</h1>
+          <span className="text-[12px] text-[#86868B] hidden sm:inline">· chat with your to-do list</span>
         </div>
 
         {(overdueTodos.length > 0 || todayTodos.length > 0) && (
           <div className="px-4 sm:px-6 pt-3 space-y-2 z-10">
             {overdueTodos.length > 0 && (
-              <div className="px-3 py-2 rounded-xl bg-[#FB4D67] border-2 border-[#170F26] text-white text-xs font-semibold flex items-center gap-2 shadow-[2px_2px_0_0_#170F26]">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>⏰ {overdueTodos.length} overdue: {overdueTodos.slice(0, 3).map(t => t.task).join(', ')}{overdueTodos.length > 3 ? '...' : ''}</span>
+              <div className="px-3.5 py-2.5 rounded-xl bg-[#FF3B30] text-white text-[12.5px] font-medium flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-px" />
+                <span>{overdueTodos.length} overdue — {overdueTodos.slice(0, 3).map(t => t.task).join(', ')}{overdueTodos.length > 3 ? '…' : ''}</span>
               </div>
             )}
             {todayTodos.length > 0 && (
-              <div className="px-3 py-2 rounded-xl bg-[#FFC53D] border-2 border-[#170F26] text-[#170F26] text-xs font-semibold flex items-center gap-2 shadow-[2px_2px_0_0_#170F26]">
-                <Clock className="w-4 h-4 shrink-0" />
-                <span>📅 Due today: {todayTodos.slice(0, 3).map(t => t.task).join(', ')}{todayTodos.length > 3 ? '...' : ''}</span>
+              <div className="px-3.5 py-2.5 rounded-xl bg-[#FFF4E5] text-[#C2670A] text-[12.5px] font-medium flex items-start gap-2">
+                <Clock className="w-4 h-4 shrink-0 mt-px" />
+                <span>Due today — {todayTodos.slice(0, 3).map(t => t.task).join(', ')}{todayTodos.length > 3 ? '…' : ''}</span>
               </div>
             )}
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-5 z-10 custom-scrollbar">
-          {messages.map((msg, i) => (
-            <div
-              key={i}
-              className={`flex items-start gap-2.5 sm:gap-3 max-w-3xl ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
-            >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold border-2 border-[#170F26] ${
-                msg.role === 'user'
-                  ? 'bg-[#6D28D9] text-white'
-                  : 'bg-white text-[#170F26]'
-              }`}>
-                {msg.role === 'user' ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 z-10 apple-scrollbar">
+          <div className="max-w-2xl mx-auto space-y-4">
+            {messages.map((msg, i) => (
+              <div key={i} className={`flex items-end gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                {msg.role === 'assistant' && (
+                  <div className="w-7 h-7 rounded-full bg-white border border-[#D2D2D7]/70 flex items-center justify-center shrink-0 text-[#0071E3]">
+                    <Bot className="w-3.5 h-3.5" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[85%] sm:max-w-[75%] px-4 py-2.5 text-[13.5px] leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-[#0071E3] text-white rounded-2xl rounded-br-md'
+                      : 'bg-white text-[#1D1D1F] rounded-2xl rounded-bl-md shadow-[0_1px_2px_rgba(0,0,0,0.05)]'
+                  }`}
+                >
+                  {msg.content}
+                </div>
               </div>
+            ))}
 
-              <div className={`p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed border-2 border-[#170F26] ${
-                msg.role === 'user'
-                  ? 'bg-[#6D28D9] text-white rounded-tr-none shadow-[3px_3px_0_0_#170F26]'
-                  : 'bg-white text-[#170F26] rounded-tl-none shadow-[3px_3px_0_0_#170F26]'
-              }`}>
-                {msg.content}
+            {isSending && (
+              <div className="flex items-end gap-2">
+                <div className="w-7 h-7 rounded-full bg-white border border-[#D2D2D7]/70 flex items-center justify-center shrink-0 text-[#0071E3]">
+                  <Bot className="w-3.5 h-3.5" />
+                </div>
+                <div className="px-4 py-2.5 rounded-2xl rounded-bl-md bg-white shadow-[0_1px_2px_rgba(0,0,0,0.05)] text-[#86868B] text-[13.5px] flex items-center gap-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0071E3]" />
+                  <span>Thinking…</span>
+                </div>
               </div>
-            </div>
-          ))}
-
-          {isSending && (
-            <div className="flex items-start gap-2.5 sm:gap-3 max-w-3xl">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold border-2 border-[#170F26] bg-white text-[#170F26]">
-                <Bot className="w-3.5 h-3.5" />
-              </div>
-              <div className="p-3.5 sm:p-4 rounded-2xl text-xs sm:text-sm leading-relaxed bg-white border-2 border-[#170F26] text-zinc-500 rounded-tl-none shadow-[3px_3px_0_0_#170F26] flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-[#6D28D9]" />
-                <span>Thinking...</span>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <div className="p-3 sm:p-4 z-10 bg-white border-t-2 border-[#170F26]">
-          <form
-            onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-            className="max-w-3xl mx-auto relative flex items-center"
-          >
+        <div
+          className="shrink-0 bg-white/80 backdrop-blur-xl border-t border-[#D2D2D7]/70 px-4 sm:px-6 pt-3 z-10"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        >
+          <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="max-w-2xl mx-auto relative flex items-center">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Tell me what to do..."
-              className="w-full bg-white border-2 border-zinc-200 focus:border-[#6D28D9] rounded-2xl pl-4 pr-12 py-2.5 sm:py-3 text-xs sm:text-sm text-[#170F26] placeholder-zinc-400 focus:outline-none transition-all"
+              placeholder="Tell me what to do…"
+              className="w-full bg-[#F5F5F7] border border-transparent focus:border-[#0071E3]/40 focus:bg-white rounded-full pl-4 pr-12 py-3 text-[14px] text-[#1D1D1F] placeholder-[#86868B] focus:outline-none focus:ring-4 focus:ring-[#0071E3]/10 transition-all duration-200"
             />
             <button
               type="submit"
               disabled={isSending || !input.trim()}
-              className="absolute right-2 p-2 bg-[#6D28D9] hover:bg-[#4C1D95] disabled:opacity-30 disabled:hover:bg-[#6D28D9] text-white font-bold rounded-xl transition-all"
+              className="absolute right-1.5 w-8 h-8 flex items-center justify-center bg-[#0071E3] hover:bg-[#0077ED] disabled:opacity-30 disabled:hover:bg-[#0071E3] text-white rounded-full transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/40 focus-visible:ring-offset-2"
             >
-              <Send className="w-4 h-4" />
+              <Send className="w-3.5 h-3.5" />
             </button>
           </form>
         </div>
