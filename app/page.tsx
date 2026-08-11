@@ -27,10 +27,10 @@ import {
 import { humanizeDue } from '@/lib/time_utils';
 import { CATEGORY_EMOJI, PRIORITY_EMOJI } from '@/lib/connectors/todos';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+);
 
 interface Todo {
   id: string;
@@ -169,12 +169,6 @@ export default function AspriDashboard() {
     setAuthError(null);
     setAuthMessage(null);
     setAuthLoading(true);
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      setAuthError('Supabase configuration missing. Please verify NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY on Vercel.');
-      setAuthLoading(false);
-      return;
-    }
 
     try {
       if (authMode === 'login') {
